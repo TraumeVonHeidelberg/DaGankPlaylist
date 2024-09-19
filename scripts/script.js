@@ -1,5 +1,6 @@
 let currentAudio = null // Przechowuje odtwarzacz audio
 let currentTrackIndex = 0 // Przechowuje indeks aktualnie odtwarzanego utworu
+let currentVolume = 0.5 // Ustawienie domyślnej głośności na 50%
 const trackList = document.querySelectorAll('.track') // Lista utworów
 let isDragging = false // Kontrola nad przeciąganiem suwaka postępu
 
@@ -24,6 +25,7 @@ function playTrackByIndex(index) {
 
 	// Tworzenie nowego elementu audio dynamicznie
 	currentAudio = new Audio(songSrc)
+	currentAudio.volume = currentVolume // Ustaw głośność na zapamiętaną wartość
 
 	// Reset paska postępu i czasu bieżącego na początku
 	const songProgress = document.querySelector('.song-progress')
@@ -138,9 +140,9 @@ songProgress.addEventListener('change', function () {
 // Zmiana głośności na podstawie suwaka
 const volumeControl = document.querySelector('.music-loudness')
 volumeControl.addEventListener('input', function () {
-	const volumeValue = volumeControl.value / 100 // Przekształcenie wartości z zakresu 0-100 na 0-1
+	currentVolume = volumeControl.value / 100 // Przekształcenie wartości z zakresu 0-100 na 0-1
 	if (currentAudio) {
-		currentAudio.volume = volumeValue // Ustawienie głośności odtwarzacza
+		currentAudio.volume = currentVolume // Ustawienie głośności odtwarzacza
 	}
 })
 
