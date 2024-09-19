@@ -3,6 +3,7 @@ let currentTrackIndex = 0 // Przechowuje indeks aktualnie odtwarzanego utworu
 let currentVolume = 0.5 // Ustawienie domyślnej głośności na 50%
 const trackList = document.querySelectorAll('.track') // Lista utworów
 let isDragging = false // Kontrola nad przeciąganiem suwaka postępu
+let isMuted = false
 
 // Funkcja do odtwarzania wybranego utworu według indeksu
 function playTrackByIndex(index) {
@@ -152,3 +153,24 @@ function formatTime(seconds) {
 	const sec = Math.floor(seconds % 60)
 	return `${minutes}:${sec < 10 ? '0' : ''}${sec}`
 }
+
+function toggleMute() {
+	const speakerIcon = document.querySelector('.speaker-btn i')
+
+	if (currentAudio) {
+		isMuted = !isMuted // Zmieniamy stan wyciszenia
+		currentAudio.muted = isMuted // Ustaw wyciszenie dla bieżącego utworu
+
+		// Zmiana ikony głośnika w zależności od stanu wyciszenia
+		if (isMuted) {
+			speakerIcon.classList.remove('fa-volume-low')
+			speakerIcon.classList.add('fa-volume-mute')
+		} else {
+			speakerIcon.classList.remove('fa-volume-mute')
+			speakerIcon.classList.add('fa-volume-low')
+		}
+	}
+}
+
+// Obsługa kliknięcia na przycisk mute (głośnik)
+document.querySelector('.speaker-btn').addEventListener('click', toggleMute)
