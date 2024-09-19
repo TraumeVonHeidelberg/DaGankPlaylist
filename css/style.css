@@ -261,7 +261,8 @@ html {
   height: 4.8rem;
 }
 
-.track-plays, .track-duration {
+.track-plays,
+.track-duration {
   color: #a9a9a8;
 }
 
