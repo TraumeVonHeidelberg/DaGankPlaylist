@@ -309,7 +309,11 @@ html {
   transform: scale(1.05);
 }
 
-.music-player-play-icon {
+.music-player-pause-btn {
+  display: none;
+}
+
+.music-player-main-icon {
   font-size: 3.2rem;
   color: white;
 }
