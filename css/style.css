@@ -318,6 +318,11 @@ html {
   cursor: pointer;
 }
 
+.btn:not(:has(.music-player-main-icon)) {
+  width: 2.2rem;
+  height: 32px;
+}
+
 .music-options {
   display: flex;
   gap: 3.2rem;
