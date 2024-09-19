@@ -172,7 +172,7 @@ function toggleMute() {
 			currentVolume = 0 // Set volume to 0 when muted
 			volumeControl.value = 0 // Update the volume slider to 0
 			currentAudio.volume = 0 // Mute the audio
-			speakerIcon.classList.remove('fa-volume-low', 'fa-volume', 'fa-volume-high')
+			speakerIcon.classList.remove('fa-volume-low', 'fa-volume-up', 'fa-volume-high')
 			speakerIcon.classList.add('fa-volume-mute')
 		} else {
 			// Restore the previous volume when unmuted

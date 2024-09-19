@@ -280,9 +280,19 @@ html {
   font-size: 1.6rem;
 }
 
+.music-player-item:first-child {
+  width: 40%;
+}
+
 .music-player-item:nth-child(2) {
   flex-direction: column;
   justify-content: center;
+  width: 100%;
+}
+
+.music-player-item:last-child {
+  width: 40%;
+  justify-content: flex-end;
 }
 
 .music-player-img {
