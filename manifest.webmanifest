@@ -1,0 +1,6 @@
+{
+"icons":[
+    {"src":"img/favicon_android_small","type":"image/webp","sizes":"192x192"},
+    {"src":"img/favicon_android_large","type":"image/webp","sizes":"512x512"}
+    ]
+}
