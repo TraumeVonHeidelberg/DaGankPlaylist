@@ -1,23 +1,22 @@
+// Initialize variables
 let currentAudio = null // Stores the current audio player
-let currentTrackIndex = null // Stores the index of the currently playing track
+let currentTrackIndex = null // Index of the currently playing track
 let currentVolume = 0.5 // Default volume set to 50%
 let previousVolume = 0.5 // Store the volume before muting
-const trackList = document.querySelectorAll('.track') // Track list
 let isDragging = false // Controls the dragging of the progress slider
 let isMuted = false // Tracks if the audio is muted
 
-// Elements for the top play button
+// Get elements
+const trackList = document.querySelectorAll('.track') // List of tracks
 const topPlayBtn = document.querySelector('.play-btn')
 const topPlayIcon = topPlayBtn.querySelector('.play-icon')
+const playBtn = document.querySelector('.music-player-play-btn')
+const pauseBtn = document.querySelector('.music-player-pause-btn')
+const songProgress = document.querySelector('.song-progress')
+const volumeControl = document.querySelector('.music-loudness')
 
 // Function to play the selected track by index
 function playTrackByIndex(index) {
-	const track = trackList[index]
-	const playIcon = track.querySelector('.play-track-icon')
-	const songSrc = playIcon.getAttribute('data-src') // Get the audio file path
-	const songTitle = track.querySelector('.track-title').textContent // Track title
-	const songImage = track.querySelector('.track-image').src // Image source
-
 	// Check if the clicked track is the same as the current and if it's playing
 	if (currentTrackIndex === index && currentAudio) {
 		if (currentAudio.paused) {
@@ -30,21 +29,29 @@ function playTrackByIndex(index) {
 		return
 	}
 
-	currentTrackIndex = index // Set the current track index
-
 	// If an audio is already playing, stop it before playing the new one
 	if (currentAudio) {
 		currentAudio.pause()
 		currentAudio.currentTime = 0 // Reset the playback time
+		currentAudio.removeEventListener('timeupdate', updateProgressBar)
+		currentAudio.removeEventListener('loadedmetadata', updateDuration)
+		currentAudio.removeEventListener('ended', handleTrackEnd)
 	}
 
-	// Create a new audio element dynamically
+	currentTrackIndex = index // Set the current track index
+
+	const track = trackList[index]
+	const playIcon = track.querySelector('.play-track-icon')
+	const songSrc = playIcon.getAttribute('data-src') // Get the audio file path
+	const songTitle = track.querySelector('.track-title').textContent // Track title
+	const songImage = track.querySelector('.track-image').src // Image source
+
+	// Create a new audio element
 	currentAudio = new Audio(songSrc)
 	currentAudio.volume = currentVolume // Set volume to the previously saved value
 	currentAudio.muted = isMuted // Set the muted state if it was previously muted
 
 	// Reset progress bar and current time at the beginning
-	const songProgress = document.querySelector('.song-progress')
 	songProgress.value = 0
 	document.querySelector('.time-current').textContent = '0:00'
 	document.querySelector('.time-total').textContent = '0:00' // Reset total time
@@ -60,37 +67,36 @@ function playTrackByIndex(index) {
 	updateActiveTrack()
 	updatePlayPauseButtons(true)
 
-	// Set event listener for loading metadata (e.g., duration of the track)
-	currentAudio.addEventListener('loadedmetadata', function () {
-		document.querySelector('.time-total').textContent = formatTime(currentAudio.duration)
-	})
-
-	// Listen for time updates and update the progress bar
+	// Set event listeners
+	currentAudio.addEventListener('loadedmetadata', updateDuration)
 	currentAudio.addEventListener('timeupdate', updateProgressBar)
+	currentAudio.addEventListener('ended', handleTrackEnd)
+}
 
-	// Handle when the track ends
-	currentAudio.addEventListener('ended', () => {
-		// Automatically play the next track when the current one finishes
-		playNextTrack()
-	})
+// Update the total duration display
+function updateDuration() {
+	document.querySelector('.time-total').textContent = formatTime(currentAudio.duration)
+}
+
+// Handle when the track ends
+function handleTrackEnd() {
+	playNextTrack()
 }
 
 // Function to play the next track
 function playNextTrack() {
-	currentTrackIndex = (currentTrackIndex + 1) % trackList.length // Increment the index, wrap to 0 when exceeding the length
-	playTrackByIndex(currentTrackIndex)
+	let nextIndex = (currentTrackIndex + 1) % trackList.length // Wrap around to the first track
+	playTrackByIndex(nextIndex)
 }
 
 // Function to play the previous track
 function playPreviousTrack() {
-	currentTrackIndex = (currentTrackIndex - 1 + trackList.length) % trackList.length // Decrement the index, wrap to the last track when less than 0
-	playTrackByIndex(currentTrackIndex)
+	let prevIndex = (currentTrackIndex - 1 + trackList.length) % trackList.length // Wrap around to the last track
+	playTrackByIndex(prevIndex)
 }
 
-// Handle clicking on the Next button
+// Event listeners for Next and Previous buttons
 document.querySelector('.next-btn').addEventListener('click', playNextTrack)
-
-// Handle clicking on the Previous button
 document.querySelector('.previous-btn').addEventListener('click', playPreviousTrack)
 
 // Function to handle clicking on a track from the list
@@ -118,45 +124,41 @@ function togglePlayPause() {
 	}
 }
 
-// Add event listeners to the Play and Pause buttons
-document.querySelector('.music-player-play-btn').addEventListener('click', togglePlayPause)
-document.querySelector('.music-player-pause-btn').addEventListener('click', togglePlayPause)
+// Event listeners for Play and Pause buttons
+playBtn.addEventListener('click', togglePlayPause)
+pauseBtn.addEventListener('click', togglePlayPause)
 
 // Function to update the progress bar
 function updateProgressBar() {
-	const songProgress = document.querySelector('.song-progress')
 	const currentTime = document.querySelector('.time-current')
 
 	if (!isDragging && currentAudio && currentAudio.duration) {
-		// Check if metadata is available
 		const progress = (currentAudio.currentTime / currentAudio.duration) * 100
-		songProgress.value = progress // Set the value of the progress bar
-		currentTime.textContent = formatTime(currentAudio.currentTime) // Update the current time
+		songProgress.value = progress // Update the progress bar
+		currentTime.textContent = formatTime(currentAudio.currentTime) // Update current time display
 	}
 }
 
 // Handle dragging and changing the progress of the track
-const songProgress = document.querySelector('.song-progress')
 songProgress.addEventListener('input', function () {
-	isDragging = true // The user is dragging the progress bar
-	const newTime = (songProgress.value / 100) * currentAudio.duration // Calculate the new time
-	currentAudio.currentTime = newTime // Set the new playback time
-	document.querySelector('.time-current').textContent = formatTime(newTime) // Update the current time
+	isDragging = true // User is dragging the progress bar
+	if (currentAudio && currentAudio.duration) {
+		const newTime = (songProgress.value / 100) * currentAudio.duration
+		currentAudio.currentTime = newTime
+		document.querySelector('.time-current').textContent = formatTime(newTime)
+	}
 })
 
 songProgress.addEventListener('change', function () {
-	isDragging = false // End dragging
+	isDragging = false // User has finished dragging
 })
 
 // Handle changing the volume with the volume slider
-const volumeControl = document.querySelector('.music-loudness')
 volumeControl.addEventListener('input', function () {
-	currentVolume = volumeControl.value / 100 // Convert the value from 0-100 to 0-1
+	currentVolume = volumeControl.value / 100 // Convert value to 0-1
 	if (currentAudio) {
-		currentAudio.volume = currentVolume // Set the volume of the audio player
+		currentAudio.volume = currentVolume
 	}
-
-	// Update the speaker icon based on the volume
 	updateVolumeIcon()
 })
 
@@ -172,22 +174,20 @@ function toggleMute() {
 	const speakerIcon = document.querySelector('.speaker-btn i')
 
 	if (currentAudio) {
-		isMuted = !isMuted // Toggle the mute state
+		isMuted = !isMuted
 
-		// If muting, store the current volume and set it to 0
 		if (isMuted) {
-			previousVolume = currentVolume // Save the current volume before muting
-			currentVolume = 0 // Set volume to 0 when muted
-			volumeControl.value = 0 // Update the volume slider to 0
-			currentAudio.volume = 0 // Mute the audio
+			previousVolume = currentVolume
+			currentVolume = 0
+			volumeControl.value = 0
+			currentAudio.volume = 0
 			speakerIcon.classList.remove('fa-volume-low', 'fa-volume-up', 'fa-volume-high')
 			speakerIcon.classList.add('fa-volume-mute')
 		} else {
-			// Restore the previous volume when unmuted
-			currentVolume = previousVolume // Restore the previous volume
-			volumeControl.value = previousVolume * 100 // Update the volume slider
-			currentAudio.volume = currentVolume // Set the audio volume
-			updateVolumeIcon() // Restore the volume icon after unmuting
+			currentVolume = previousVolume
+			volumeControl.value = previousVolume * 100
+			currentAudio.volume = currentVolume
+			updateVolumeIcon()
 		}
 	}
 }
@@ -234,9 +234,6 @@ function updateActiveTrack() {
 
 // Function to update play/pause buttons in the music player and track list
 function updatePlayPauseButtons(isPlaying) {
-	const playBtn = document.querySelector('.music-player-play-btn')
-	const pauseBtn = document.querySelector('.music-player-pause-btn')
-
 	if (isPlaying) {
 		playBtn.style.display = 'none'
 		pauseBtn.style.display = 'inline-block'
@@ -257,7 +254,6 @@ function updatePlayPauseButtons(isPlaying) {
 				icon.classList.add('fa-play')
 			}
 		} else {
-			// For other tracks, ensure they show 'play' icon
 			icon.classList.remove('fa-pause')
 			icon.classList.add('fa-play')
 		}
