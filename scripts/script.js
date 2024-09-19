@@ -1,5 +1,5 @@
 let currentAudio = null // Stores the current audio player
-let currentTrackIndex = 0 // Stores the index of the currently playing track
+let currentTrackIndex = null // Stores the index of the currently playing track
 let currentVolume = 0.5 // Default volume set to 50%
 let previousVolume = 0.5 // Store the volume before muting
 const trackList = document.querySelectorAll('.track') // Track list
@@ -8,18 +8,27 @@ let isMuted = false // Tracks if the audio is muted
 
 // Function to play the selected track by index
 function playTrackByIndex(index) {
-	currentTrackIndex = index // Set the current track index
 	const track = trackList[index]
 	const playIcon = track.querySelector('.play-track-icon')
 	const songSrc = playIcon.getAttribute('data-src') // Get the audio file path
-	const songTitle = playIcon.nextElementSibling.nextElementSibling.textContent // Track title
-	const songImage = playIcon.nextElementSibling.src // Image source
+	const songTitle = track.querySelector('.track-title').textContent // Track title
+	const songImage = track.querySelector('.track-image').src // Image source
 
-	// Get the play/pause buttons in the music player
-	const playBtn = document.querySelector('.music-player-play-btn')
-	const pauseBtn = document.querySelector('.music-player-pause-btn')
+	// Check if the clicked track is the same as the current and if it's playing
+	if (currentTrackIndex === index && currentAudio) {
+		if (currentAudio.paused) {
+			currentAudio.play()
+			updatePlayPauseButtons(true)
+		} else {
+			currentAudio.pause()
+			updatePlayPauseButtons(false)
+		}
+		return
+	}
 
-	// Check if an audio is already playing - if so, stop it before playing the new one
+	currentTrackIndex = index // Set the current track index
+
+	// If an audio is already playing, stop it before playing the new one
 	if (currentAudio) {
 		currentAudio.pause()
 		currentAudio.currentTime = 0 // Reset the playback time
@@ -43,6 +52,10 @@ function playTrackByIndex(index) {
 	document.querySelector('.music-player-song-title').textContent = songTitle
 	document.querySelector('.music-player-img').src = songImage
 
+	// Update active track and play/pause buttons
+	updateActiveTrack()
+	updatePlayPauseButtons(true)
+
 	// Set event listener for loading metadata (e.g., duration of the track)
 	currentAudio.addEventListener('loadedmetadata', function () {
 		document.querySelector('.time-total').textContent = formatTime(currentAudio.duration)
@@ -56,10 +69,6 @@ function playTrackByIndex(index) {
 		// Automatically play the next track when the current one finishes
 		playNextTrack()
 	})
-
-	// Hide the Play button and show the Pause button
-	playBtn.style.display = 'none'
-	pauseBtn.style.display = 'inline-block'
 }
 
 // Function to play the next track
@@ -84,7 +93,7 @@ document.querySelector('.previous-btn').addEventListener('click', playPreviousTr
 function playTrack(event) {
 	const trackElement = event.currentTarget
 	const trackIndex = Array.from(trackList).indexOf(trackElement) // Get the index of the clicked track
-	playTrackByIndex(trackIndex) // Play the selected track
+	playTrackByIndex(trackIndex)
 }
 
 // Add event listeners to each track for clicking
@@ -94,18 +103,13 @@ trackList.forEach(track => {
 
 // Function to pause or resume the track
 function togglePlayPause() {
-	const playBtn = document.querySelector('.music-player-play-btn')
-	const pauseBtn = document.querySelector('.music-player-pause-btn')
-
 	if (currentAudio) {
 		if (currentAudio.paused) {
 			currentAudio.play() // Resume playing
-			playBtn.style.display = 'none'
-			pauseBtn.style.display = 'inline-block'
+			updatePlayPauseButtons(true)
 		} else {
 			currentAudio.pause() // Pause the audio
-			pauseBtn.style.display = 'none'
-			playBtn.style.display = 'inline-block'
+			updatePlayPauseButtons(false)
 		}
 	}
 }
@@ -205,3 +209,53 @@ function updateVolumeIcon() {
 
 // Add event listener to the mute button (speaker icon)
 document.querySelector('.speaker-btn').addEventListener('click', toggleMute)
+
+// Function to update the active track title and play/pause icons
+function updateActiveTrack() {
+	// Remove 'active' class from all track titles and reset play icons
+	trackList.forEach(track => {
+		const title = track.querySelector('.track-title')
+		title.classList.remove('active')
+
+		const icon = track.querySelector('.play-track-icon')
+		icon.classList.remove('fa-pause')
+		icon.classList.add('fa-play')
+	})
+
+	// Add 'active' class to the selected track's title
+	const currentTrack = trackList[currentTrackIndex]
+	const title = currentTrack.querySelector('.track-title')
+	title.classList.add('active')
+}
+
+// Function to update play/pause buttons in the music player and track list
+function updatePlayPauseButtons(isPlaying) {
+	const playBtn = document.querySelector('.music-player-play-btn')
+	const pauseBtn = document.querySelector('.music-player-pause-btn')
+
+	if (isPlaying) {
+		playBtn.style.display = 'none'
+		pauseBtn.style.display = 'inline-block'
+	} else {
+		pauseBtn.style.display = 'none'
+		playBtn.style.display = 'inline-block'
+	}
+
+	// Update the play/pause icon in the track list
+	trackList.forEach((track, index) => {
+		const icon = track.querySelector('.play-track-icon')
+		if (index === currentTrackIndex) {
+			if (isPlaying) {
+				icon.classList.remove('fa-play')
+				icon.classList.add('fa-pause')
+			} else {
+				icon.classList.remove('fa-pause')
+				icon.classList.add('fa-play')
+			}
+		} else {
+			// For other tracks, ensure they show 'play' icon
+			icon.classList.remove('fa-pause')
+			icon.classList.add('fa-play')
+		}
+	})
+}
