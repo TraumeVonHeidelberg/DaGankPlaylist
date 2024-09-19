@@ -346,4 +346,13 @@ html {
 
 .song-progress {
   width: 50rem;
+}
+
+input[type=range] {
+  accent-color: #fff; /* Changes the color to green */
+  outline: none;
+}
+
+input[type=range]:hover {
+  accent-color: #1ed760; /* Changes the color to green */
 }/*# sourceMappingURL=style.css.map */

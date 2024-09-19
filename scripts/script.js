@@ -6,6 +6,10 @@ const trackList = document.querySelectorAll('.track') // Track list
 let isDragging = false // Controls the dragging of the progress slider
 let isMuted = false // Tracks if the audio is muted
 
+// Elements for the top play button
+const topPlayBtn = document.querySelector('.play-btn')
+const topPlayIcon = topPlayBtn.querySelector('.play-icon')
+
 // Function to play the selected track by index
 function playTrackByIndex(index) {
 	const track = trackList[index]
@@ -258,4 +262,24 @@ function updatePlayPauseButtons(isPlaying) {
 			icon.classList.add('fa-play')
 		}
 	})
+
+	// Update the top play button icon
+	if (isPlaying) {
+		topPlayIcon.classList.remove('fa-play')
+		topPlayIcon.classList.add('fa-pause')
+	} else {
+		topPlayIcon.classList.remove('fa-pause')
+		topPlayIcon.classList.add('fa-play')
+	}
 }
+
+// Add event listener to the top play button
+topPlayBtn.addEventListener('click', function () {
+	// If no track is selected yet, play the first track
+	if (currentTrackIndex === null) {
+		playTrackByIndex(0)
+	} else {
+		// Toggle play/pause of the current track
+		togglePlayPause()
+	}
+})

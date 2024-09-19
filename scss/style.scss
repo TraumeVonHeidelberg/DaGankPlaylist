@@ -251,8 +251,7 @@ html {
 	}
 }
 
-.track-title.active
-{
+.track-title.active {
 	color: #1ed760;
 }
 
@@ -299,11 +298,9 @@ html {
 	font-size: 1.6rem;
 }
 
-.music-player-item:first-child
-{
+.music-player-item:first-child {
 	width: 40%;
 }
-
 
 .music-player-item:nth-child(2) {
 	flex-direction: column;
@@ -311,8 +308,7 @@ html {
 	width: 100%;
 }
 
-.music-player-item:last-child
-{
+.music-player-item:last-child {
 	width: 40%;
 	justify-content: flex-end;
 }
@@ -365,4 +361,13 @@ html {
 
 .song-progress {
 	width: 50rem;
+}
+
+input[type="range"] {
+    accent-color: #fff; /* Changes the color to green */
+	outline:none;
+}
+
+input[type="range"]:hover {
+    accent-color: #1ed760; /* Changes the color to green */
 }
