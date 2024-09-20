@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Da Gank Playlist</title>
+    <link rel="icon" href="./img/favicon_desktop.webp">
+    <link rel="apple-touch-icon" href="img/favicon_ios.webp">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <script src="https://kit.fontawesome.com/3b7d7d2b37.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+
+<body>
+    <nav class="main-nav">
+        <ul class="main-nav-list">
+            <li class="nav-list-item"><img class="nav-img" src="./img/favicon_android_large.webp"
+                    alt="Image of our leader, Jonas IV"></li>
+            <li class="nav-list-item">
+                <div class="nav-utility-bar">
+                    <button class="home-btn">
+                        <i class="home-icon fa-solid fa-house"></i>
+                    </button>
+                    <div class="search-bar">
+                        <i class="search-icon fa-solid fa-magnifying-glass"></i>
+                        <p class="search-bar-text">What do you want to play?</p>
+                    </div>
+                </div>
+            </li>
+            <li class="nav-list-item">
+                <div class="login-btns">
+                    <button class="main-btn sign-up-btn">Sign up</button>
+                    <button class="main-btn log-in-btn">Log in</button>
+                </div>
+            </li>
+        </ul>
+
+        <!-- <div class="modal">
+            <div class="modal-content">
+
+            </div>
+        </div> -->
+    </nav>
+    <main>
+        <div class="container">
+            <header class="main-header">
+                <h1 class="header-name">Da Gank Playlist</h1>
+                <p class="monthly-listeners">0 montly listeners</p>
+            </header>
+            <section class="play-section">
+                <button class="play-btn">
+                    <i class="play-icon fa-solid fa-play"></i>
+                </button>
+                <h2 class="music-list-header">Tracks</h2>
+
+                <ul class="track-list">
+                    <li class="track">
+                        <div class="track-main-info">
+                            <span class="track-number">1</span>
+                            <i class="play-track-icon fa-solid fa-play" data-src="./audio/LIT.mp3"></i>
+                            <img class="track-image" src="./img/da gank members/me.webp"
+                                alt="Da gank member who added this song">
+                            <span class="track-title">LIT</span>
+                        </div>
+                        <span class="track-plays">0</span>
+                        <span class="track-duration">2:15</span>
+                    </li>
+                    <li class="track">
+                        <div class="track-main-info">
+                            <span class="track-number">2</span>
+                            <i class="play-track-icon fa-solid fa-play" data-src="./audio/Que Mala Kamala.mp3"></i>
+                            <img class="track-image" src="./img/da gank members/me.webp"
+                                alt="Da gank member who added this song">
+                            <span class="track-title">Que Mala Kamala</span>
+                        </div>
+                        <span class="track-plays">0</span>
+                        <span class="track-duration">0:31</span>
+                    </li>
+                    <li class="track">
+                        <div class="track-main-info">
+                            <span class="track-number">3</span>
+                            <i class="play-track-icon fa-solid fa-play" data-src="./audio/A Gentle Sunlight.mp3"></i>
+                            <img class="track-image" src="./img/da gank members/jarell.webp"
+                                alt="Da gank member who added this song">
+                            <span class="track-title">A Gentle Sunlight</span>
+                        </div>
+                        <span class="track-plays">0</span>
+                        <span class="track-duration">2:00</span>
+                    </li>
+                    <li class="track">
+                        <div class="track-main-info">
+                            <span class="track-number">4</span>
+                            <i class="play-track-icon fa-solid fa-play" data-src="./audio/Mutant Christ.mp3"></i>
+                            <img class="track-image" src="./img/da gank members/flopz.webp"
+                                alt="Da gank member who added this song">
+                            <span class="track-title">Mutant Christ</span>
+                        </div>
+                        <span class="track-plays">0</span>
+                        <span class="track-duration">4:18</span>
+                    </li>
+                    <li class="track">
+                        <div class="track-main-info">
+                            <span class="track-number">5</span>
+                            <i class="play-track-icon fa-solid fa-play" data-src="./audio/Kiraz Mevsimi.mp3"></i>
+                            <img class="track-image" src="./img/da gank members/chy.webp"
+                                alt="Da gank member who added this song">
+                            <span class="track-title">Kiraz Mevsimi</span>
+                        </div>
+                        <span class="track-plays">0</span>
+                        <span class="track-duration">2:46</span>
+                    </li>
+                    <li class="track">
+                        <div class="track-main-info">
+                            <span class="track-number">6</span>
+                            <i class="play-track-icon fa-solid fa-play"
+                                data-src="./audio/Things will fall to its place.mp3"></i>
+                            <img class="track-image" src="./img/da gank members/jarell.webp"
+                                alt="Da gank member who added this song">
+                            <span class="track-title">Things will fall to its place</span>
+                        </div>
+                        <span class="track-plays">0</span>
+                        <span class="track-duration">3:47</span>
+                    </li>
+                </ul>
+            </section>
+        </div>
+
+        <section class="music-player" id="musicPlayer">
+            <div class="music-player-item music-player-first-item">
+                <img src="./img/da gank members/chy.webp" alt="Da member who added this song to playlist"
+                    class="music-player-img">
+                <p class="music-player-song-title">Kiraz Mevsimi</p>
+                <button class="btn add-linked-songs"><i
+                        class="music-player-icon plus-icon fa-solid fa-circle-plus"></i></button>
+            </div>
+            <div class="music-player-item">
+                <div class="music-options">
+                    <button class="btn shuffle-btn"><i
+                            class="music-player-icon shuffle-icon fa-solid fa-shuffle"></i></button>
+                    <button class="btn previous-btn"><i
+                            class="music-player-icon fa-solid fa-backward-step"></i></button>
+                    <button class="btn music-player-play-btn"><i
+                            class="music-player-icon music-player-main-icon fa-solid fa-circle-play"></i></button>
+                    <button class="btn music-player-pause-btn"><i
+                            class="music-player-icon music-player-main-icon fa-solid fa-circle-pause"></i></button>
+                    <button class="btn next-btn"><i class="music-player-icon fa-solid fa-forward-step"></i></button>
+                    <button class="btn repeat-btn"><i class="music-player-icon fa-solid fa-repeat"></i></button>
+                </div>
+                <div class="progress-bar">
+                    <span class="time-current">0:00</span>
+                    <input class="song-progress" type="range" min="0" max="100" value="0">
+                    <span class="time-total">2:46</span>
+                </div>
+            </div>
+            <div class="music-player-item">
+                <button class="btn queue-btn"><i class="music-player-icon fa-solid fa-layer-group"></i></button>
+                <button class="btn speaker-btn"><i class="music-player-icon fa-solid fa-volume-low"></i></button>
+                <input class="music-loudness" type="range" min="0" max="100" value="50">
+            </div>
+        </section>
+    </main>
+
+
+    <script src="./scripts/script.js"></script>
+    <script src="./scripts/login.js"></script>
+</body>
+
+</html>
