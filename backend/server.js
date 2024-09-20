@@ -9,8 +9,8 @@ app.use(express.static('../public'))
 
 // Strona główna — teraz załaduje plik index.html z folderu 'public'
 app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/../public/index.html');
-  });
+	res.sendFile(__dirname + '/../public/index.html')
+})
 
 // Trasa do autoryzacji przez Discord
 app.get('/auth/discord', (req, res) => {
@@ -57,8 +57,8 @@ app.get('/auth/discord/callback', async (req, res) => {
 
 		const user = userResponse.data
 
-		// Tu można dodać użytkownika do bazy danych lub logować go
-		res.send(`Hello, ${user.username}`)
+		// Przekierowanie do strony głównej z danymi użytkownika w query string
+		res.redirect(`/index.html?username=${user.username}&avatar=${user.avatar}&id=${user.id}`)
 	} catch (error) {
 		console.error('Błąd OAuth:', error)
 		res.redirect('/error')
