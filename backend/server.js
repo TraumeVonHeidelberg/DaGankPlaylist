@@ -1,11 +1,18 @@
 require('dotenv').config()
 const express = require('express')
+const cors = require('cors') // Import CORS
 const axios = require('axios')
 const app = express()
 const port = 3000
 
 // Obsługa plików statycznych z folderu 'public'
 app.use(express.static('../public'))
+
+app.use(
+	cors({
+		origin: 'https://dagankplaylist.netlify.app', // Zastąp URL swojej strony Netlify
+	})
+)
 
 // Strona główna — teraz załaduje plik index.html z folderu 'public'
 app.get('/', (req, res) => {
