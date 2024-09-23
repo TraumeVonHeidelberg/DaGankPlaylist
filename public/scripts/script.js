@@ -7,6 +7,7 @@ let currentVolume = 0.5 // Default volume set to 50%
 let previousVolume = 0.5 // Store the volume before muting
 let isDragging = false // Controls the dragging of the progress slider
 let isMuted = false // Tracks if the audio is muted
+let tracks = [] // Declare tracks globally
 
 // Get elements
 const topPlayBtn = document.querySelector('.play-btn')
@@ -23,7 +24,7 @@ async function loadTracks() {
 		if (!response.ok) {
 			throw new Error('Failed to load tracks')
 		}
-		const tracks = await response.json()
+		tracks = await response.json() // Assign to global tracks
 
 		const trackList = document.querySelector('.track-list')
 		trackList.innerHTML = '' // Clear the existing list
@@ -43,7 +44,7 @@ async function loadTracks() {
                 <span class="track-duration">${track.duration}</span>
             `
 			// Add an event listener to play the track when clicked
-			trackElement.addEventListener('click', () => playTrackByIndex(index, tracks))
+			trackElement.addEventListener('click', () => playTrackByIndex(index))
 			trackList.appendChild(trackElement)
 		})
 	} catch (error) {
@@ -52,7 +53,7 @@ async function loadTracks() {
 }
 
 // Function to play a selected track by index
-function playTrackByIndex(index, tracks) {
+function playTrackByIndex(index) {
 	if (currentTrackIndex === index && currentAudio) {
 		if (currentAudio.paused) {
 			currentAudio.play()
@@ -107,7 +108,9 @@ function playTrackByIndex(index, tracks) {
 
 // Update the total track duration display
 function updateDuration() {
-	document.querySelector('.time-total').textContent = formatTime(currentAudio.duration)
+	if (currentAudio && currentAudio.duration) {
+		document.querySelector('.time-total').textContent = formatTime(currentAudio.duration)
+	}
 }
 
 // Handle when a track ends
@@ -117,20 +120,17 @@ function handleTrackEnd() {
 
 // Play the next track in the list
 function playNextTrack() {
-	let nextIndex = (currentTrackIndex + 1) % document.querySelectorAll('.track').length
+	if (tracks.length === 0) return
+	let nextIndex = (currentTrackIndex + 1) % tracks.length
 	playTrackByIndex(nextIndex)
 }
 
 // Play the previous track in the list
 function playPreviousTrack() {
-	let prevIndex =
-		(currentTrackIndex - 1 + document.querySelectorAll('.track').length) % document.querySelectorAll('.track').length
+	if (tracks.length === 0) return
+	let prevIndex = (currentTrackIndex - 1 + tracks.length) % tracks.length
 	playTrackByIndex(prevIndex)
 }
-
-// Event listeners for Next and Previous buttons
-document.querySelector('.next-btn').addEventListener('click', playNextTrack)
-document.querySelector('.previous-btn').addEventListener('click', playPreviousTrack)
 
 // Toggle play/pause functionality
 function togglePlayPause() {
@@ -142,12 +142,10 @@ function togglePlayPause() {
 			currentAudio.pause()
 			updatePlayPauseButtons(false)
 		}
+	} else if (tracks.length > 0) {
+		playTrackByIndex(0)
 	}
 }
-
-// Event listeners for play and pause buttons
-playBtn.addEventListener('click', togglePlayPause)
-pauseBtn.addEventListener('click', togglePlayPause)
 
 // Update the progress bar as the track plays
 function updateProgressBar() {
@@ -232,9 +230,6 @@ function updateVolumeIcon() {
 	}
 }
 
-// Event listener for the mute button
-document.querySelector('.speaker-btn').addEventListener('click', toggleMute)
-
 // Update the active track title and play/pause icons
 function updateActiveTrack() {
 	const trackList = document.querySelectorAll('.track')
@@ -247,9 +242,15 @@ function updateActiveTrack() {
 		icon.classList.add('fa-play')
 	})
 
-	const currentTrack = trackList[currentTrackIndex]
-	const title = currentTrack.querySelector('.track-title')
-	title.classList.add('active')
+	if (currentTrackIndex !== null && trackList[currentTrackIndex]) {
+		const currentTrack = trackList[currentTrackIndex]
+		const title = currentTrack.querySelector('.track-title')
+		title.classList.add('active')
+
+		const icon = currentTrack.querySelector('.play-track-icon')
+		icon.classList.remove('fa-play')
+		icon.classList.add('fa-pause')
+	}
 }
 
 // Update play/pause buttons in the music player and track list
@@ -288,15 +289,6 @@ function updatePlayPauseButtons(isPlaying) {
 	}
 }
 
-// Event listener for the top play button
-topPlayBtn.addEventListener('click', function () {
-	if (currentTrackIndex === null) {
-		playTrackByIndex(0)
-	} else {
-		togglePlayPause()
-	}
-})
-
 // Discord login functionality
 function handleUserLogin() {
 	const urlParams = new URLSearchParams(window.location.search)
@@ -321,13 +313,52 @@ function handleUserLogin() {
 	}
 }
 
-// Event listener for the login button
-document.querySelector('.log-in-btn').addEventListener('click', () => {
-	window.location.href = `${backendUrl}/auth/discord`
-})
-
 // Load tracks and handle user login on page load
 window.addEventListener('DOMContentLoaded', () => {
 	handleUserLogin()
 	loadTracks() // Load the tracks after the page is fully loaded
+
+	// Add event listeners after DOM content is loaded
+	const nextBtn = document.querySelector('.next-btn')
+	const prevBtn = document.querySelector('.previous-btn')
+	const speakerBtn = document.querySelector('.speaker-btn')
+	const loginBtn = document.querySelector('.log-in-btn')
+
+	if (nextBtn) {
+		nextBtn.addEventListener('click', playNextTrack)
+	}
+
+	if (prevBtn) {
+		prevBtn.addEventListener('click', playPreviousTrack)
+	}
+
+	if (playBtn) {
+		playBtn.addEventListener('click', togglePlayPause)
+	}
+
+	if (pauseBtn) {
+		pauseBtn.addEventListener('click', togglePlayPause)
+	}
+
+	if (topPlayBtn) {
+		topPlayBtn.addEventListener('click', function () {
+			if (currentTrackIndex === null) {
+				if (tracks.length > 0) {
+					playTrackByIndex(0)
+				}
+			} else {
+				togglePlayPause()
+			}
+		})
+	}
+
+	if (speakerBtn) {
+		speakerBtn.addEventListener('click', toggleMute)
+	}
+
+	if (loginBtn) {
+		loginBtn.addEventListener('click', () => {
+			window.location.href = `${backendUrl}/auth/discord`
+		})
+	}
 })
