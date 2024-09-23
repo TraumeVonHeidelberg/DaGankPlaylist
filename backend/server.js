@@ -12,10 +12,7 @@ const port = process.env.PORT || 3000
 
 // 1. Połączenie z MongoDB
 mongoose
-	.connect(process.env.MONGODB_URI, {
-		useNewUrlParser: true,
-		useUnifiedTopology: true,
-	})
+	.connect(process.env.MONGODB_URI)
 	.then(() => {
 		console.log('Połączono z MongoDB')
 	})
