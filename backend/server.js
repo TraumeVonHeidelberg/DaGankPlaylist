@@ -5,6 +5,7 @@ const axios = require('axios')
 const mongoose = require('mongoose') // Import Mongoose
 const app = express()
 const Track = require('./models/Track')
+const ffmpeg = require('fluent-ffmpeg')
 const port = 3000
 
 // 1. Połączenie z MongoDB
@@ -96,20 +97,37 @@ app.get('/api/tracks', async (req, res) => {
 	}
 })
 
-app.post('/api/tracks', upload.single('songFile'), async (req, res) => {
-    try {
-        const newTrack = new Track({
-            title: req.body.songTitle,
-            file: `/uploads/${req.file.filename}`, // Ścieżka do pliku
-            duration: req.body.duration // Zakładamy, że dostarczasz czas trwania z formularza
-        });
+app.post('/api/tracks', upload.single('songFile'), (req, res) => {
+    const filePath = path.join(__dirname, 'uploads', req.file.filename); // Ścieżka do pliku
 
-        await newTrack.save(); // Zapisanie nowego utworu do MongoDB
+    // Ustalanie długości utworu za pomocą ffmpeg
+    ffmpeg.ffprobe(filePath, async (err, metadata) => {
+        if (err) {
+            console.error('Błąd podczas analizy pliku audio:', err);
+            return res.status(500).json({ error: 'Nie udało się ustalić długości utworu.' });
+        }
 
-        res.status(201).json(newTrack);
-    } catch (error) {
-        res.status(500).json({ error: 'Nie udało się dodać utworu.' });
-    }
+        // Obliczanie czasu trwania utworu w formacie MM:SS
+        const durationInSeconds = Math.floor(metadata.format.duration);
+        const minutes = Math.floor(durationInSeconds / 60);
+        const seconds = durationInSeconds % 60;
+        const formattedDuration = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+
+        // Tworzenie nowego rekordu utworu
+        try {
+            const newTrack = new Track({
+                title: req.body.songTitle,
+                file: `/uploads/${req.file.filename}`, // Ścieżka do pliku
+                duration: formattedDuration, // Obliczony czas trwania
+            });
+
+            await newTrack.save(); // Zapisanie nowego utworu do MongoDB
+            res.status(201).json(newTrack); // Zwrócenie odpowiedzi z nowo dodanym utworem
+        } catch (error) {
+            console.error('Błąd podczas zapisu utworu do bazy danych:', error);
+            res.status(500).json({ error: 'Nie udało się dodać utworu.' });
+        }
+    });
 });
 
 app.listen(port, () => {

@@ -60,7 +60,7 @@
 
                 <h2 class="music-list-header">Tracks</h2>
 
-                <ul class="track-list">
+                <!-- <ul class="track-list">
                     <li class="track">
                         <div class="track-main-info">
                             <span class="track-number">1</span>
@@ -128,7 +128,7 @@
                         <span class="track-plays">0</span>
                         <span class="track-duration">3:47</span>
                     </li>
-                </ul>
+                </ul> -->
             </section>
         </div>
 
@@ -168,7 +168,7 @@
     </main>
 
     <div class="add-song-modal" id="addSongModal">
-        <form class="modal-content" id="song-upload-form">
+        <form class="modal-content" id="song-upload-form" enctype="multipart/form-data"> 
             <div class="form-field">
                 <label for="song-title">Song Title</label>
                 <input type="text" id="song-title" name="song-title" required>
