@@ -8,7 +8,7 @@ const path = require('path') // Do pracy ze ścieżkami plików
 const ffmpeg = require('fluent-ffmpeg') // Import ffmpeg
 const Track = require('./models/Track') // Import modelu Track
 const app = express()
-const port = 3000
+const port = process.env.PORT || 3000
 
 // 1. Połączenie z MongoDB
 mongoose
@@ -24,8 +24,9 @@ mongoose
 	})
 
 // Obsługa plików statycznych z folderu 'public'
-app.use(express.static('../public'))
+app.use(express.static(path.join(__dirname, '../public')))
 
+// Użycie CORS
 app.use(
 	cors({
 		origin: 'https://dagankplaylist.netlify.app', // Zastąp URL swojej strony Netlify
@@ -46,7 +47,7 @@ const upload = multer({ storage: storage }) // Inicjalizacja multer z powyższą
 
 // Strona główna — teraz załaduje plik index.html z folderu 'public'
 app.get('/', (req, res) => {
-	res.sendFile(__dirname + '/../public/index.html')
+	res.sendFile(path.join(__dirname, '../public/index.html'))
 })
 
 // Trasa do autoryzacji przez Discord
@@ -146,6 +147,7 @@ app.post('/api/tracks', upload.single('songFile'), (req, res) => {
 	})
 })
 
+// Uruchomienie serwera
 app.listen(port, () => {
 	console.log(`Serwer działa na http://localhost:${port}`)
 })
