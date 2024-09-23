@@ -1,70 +1,73 @@
-require('dotenv').config() // Załaduj zmienne środowiskowe
+require('dotenv').config() // Load environment variables
 const express = require('express')
 const cors = require('cors') // Import CORS
 const axios = require('axios')
 const mongoose = require('mongoose') // Import Mongoose
 const multer = require('multer') // Import Multer
-const path = require('path') // Do pracy ze ścieżkami plików
+const path = require('path') // For working with file paths
 const ffmpeg = require('fluent-ffmpeg') // Import ffmpeg
-const Track = require('./models/Track') // Import modelu Track
+const Track = require('./models/Track') // Import Track model
 const app = express()
 const fs = require('fs')
 const port = process.env.PORT || 3000
 
 const uploadDir = path.join(__dirname, 'uploads')
 
-// Sprawdź, czy katalog istnieje, jeśli nie, utwórz go
+// Check if the directory exists, if not, create it
 if (!fs.existsSync(uploadDir)) {
 	fs.mkdirSync(uploadDir, { recursive: true })
 }
 
-// 1. Połączenie z MongoDB
+// 1. Connect to MongoDB
 mongoose
 	.connect(process.env.MONGODB_URI)
 	.then(() => {
-		console.log('Połączono z MongoDB')
+		console.log('Connected to MongoDB')
 	})
 	.catch(err => {
-		console.error('Błąd połączenia z MongoDB:', err)
+		console.error('MongoDB connection error:', err)
 	})
 
-// Obsługa plików statycznych z folderu 'public'
+// Serve static files from 'public' directory
 app.use(express.static(path.join(__dirname, '../public')))
 
-// Użycie CORS
+// Serve static files from 'uploads' directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
+
+// Use CORS
 app.use(
 	cors({
-		origin: 'https://dagankplaylist.netlify.app', // Zastąp URL swojej strony Netlify
+		origin: ['https://dagankplaylist.netlify.app', 'http://localhost:3000'], // Replace with your frontend URLs
 	})
 )
 
-// Konfiguracja multer do obsługi uploadu plików
+// Multer configuration for file uploads
 const storage = multer.diskStorage({
 	destination: (req, file, cb) => {
-		cb(null, 'uploads/') // Ścieżka do katalogu, gdzie będą przechowywane pliki
+		cb(null, 'uploads/') // Path to the directory where files will be stored
 	},
 	filename: (req, file, cb) => {
-		cb(null, Date.now() + path.extname(file.originalname)) // Nazwa pliku z unikalnym timestampem
+		cb(null, Date.now() + path.extname(file.originalname)) // Unique filename with timestamp
 	},
 })
 
-const upload = multer({ storage: storage }) // Inicjalizacja multer z powyższą konfiguracją
+const upload = multer({ storage: storage }) // Initialize multer with the above configuration
 
-// Strona główna — teraz załaduje plik index.html z folderu 'public'
+// Home page — now loads index.html from 'public' folder
 app.get('/', (req, res) => {
 	res.sendFile(path.join(__dirname, '../public/index.html'))
 })
 
-// Trasa do autoryzacji przez Discord
+// Route for Discord authentication
 app.get('/auth/discord', (req, res) => {
 	const clientId = process.env.DISCORD_CLIENT_ID
 	const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI)
 	const oauth2Url = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=identify%20email`
 
-	res.redirect(oauth2Url) // Przekierowanie do Discord OAuth
+	res.redirect(oauth2Url) // Redirect to Discord OAuth
 })
 
-// Trasa, którą Discord wywoła po autoryzacji
+// Route that Discord will call after authentication
 app.get('/auth/discord/callback', async (req, res) => {
 	const code = req.query.code
 	const clientId = process.env.DISCORD_CLIENT_ID
@@ -72,26 +75,23 @@ app.get('/auth/discord/callback', async (req, res) => {
 	const redirectUri = process.env.DISCORD_REDIRECT_URI
 
 	try {
-		// Wymiana kodu na token
-		const tokenResponse = await axios.post(
-			'https://discord.com/api/oauth2/token',
-			{
-				client_id: clientId,
-				client_secret: clientSecret,
-				grant_type: 'authorization_code',
-				code: code,
-				redirect_uri: redirectUri,
+		// Exchange code for token
+		const params = new URLSearchParams()
+		params.append('client_id', clientId)
+		params.append('client_secret', clientSecret)
+		params.append('grant_type', 'authorization_code')
+		params.append('code', code)
+		params.append('redirect_uri', redirectUri)
+
+		const tokenResponse = await axios.post('https://discord.com/api/oauth2/token', params, {
+			headers: {
+				'Content-Type': 'application/x-www-form-urlencoded',
 			},
-			{
-				headers: {
-					'Content-Type': 'application/x-www-form-urlencoded',
-				},
-			}
-		)
+		})
 
 		const accessToken = tokenResponse.data.access_token
 
-		// Pobieranie danych użytkownika
+		// Fetch user data
 		const userResponse = await axios.get('https://discord.com/api/users/@me', {
 			headers: {
 				Authorization: `Bearer ${accessToken}`,
@@ -100,59 +100,62 @@ app.get('/auth/discord/callback', async (req, res) => {
 
 		const user = userResponse.data
 
-		// Przekierowanie do strony głównej z danymi użytkownika w query string
+		// Redirect to homepage with user data in query string
 		res.redirect(`/index.html?username=${user.username}&avatar=${user.avatar}&id=${user.id}`)
 	} catch (error) {
-		console.error('Błąd OAuth:', error)
+		console.error('OAuth error:', error)
 		res.redirect('/error')
 	}
 })
 
-// Trasa do pobierania utworów
+// Route to fetch tracks
 app.get('/api/tracks', async (req, res) => {
 	try {
-		const tracks = await Track.find() // Pobiera wszystkie utwory z bazy
+		const tracks = await Track.find() // Fetch all tracks from the database
 		res.json(tracks)
 	} catch (error) {
-		res.status(500).json({ error: 'Nie udało się pobrać utworów.' })
+		res.status(500).json({ error: 'Failed to fetch tracks.' })
 	}
 })
 
-// Trasa do dodawania nowego utworu
+// Route to add a new track
 app.post('/api/tracks', upload.single('songFile'), (req, res) => {
-	const filePath = path.join(__dirname, 'uploads', req.file.filename) // Ścieżka do pliku
+	const filePath = path.join(__dirname, 'uploads', req.file.filename) // Path to the file
 
-	// Ustalanie długości utworu za pomocą ffmpeg
+	// Get track duration using ffmpeg
 	ffmpeg.ffprobe(filePath, async (err, metadata) => {
 		if (err) {
-			console.error('Błąd podczas analizy pliku audio:', err)
-			return res.status(500).json({ error: 'Nie udało się ustalić długości utworu.' })
+			console.error('Error analyzing audio file:', err)
+			return res.status(500).json({ error: 'Failed to determine track duration.' })
 		}
 
-		// Obliczanie czasu trwania utworu w formacie MM:SS
+		// Calculate track duration in MM:SS format
 		const durationInSeconds = Math.floor(metadata.format.duration)
 		const minutes = Math.floor(durationInSeconds / 60)
 		const seconds = durationInSeconds % 60
 		const formattedDuration = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`
 
-		// Tworzenie nowego rekordu utworu
+		// Create a full URL for the file
+		const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`
+
+		// Create a new track record
 		try {
 			const newTrack = new Track({
 				title: req.body.songTitle,
-				file: `/uploads/${req.file.filename}`, // Ścieżka do pliku
-				duration: formattedDuration, // Obliczony czas trwania
+				file: fileUrl, // Full URL to the file
+				duration: formattedDuration, // Calculated duration
 			})
 
-			await newTrack.save() // Zapisanie nowego utworu do MongoDB
-			res.status(201).json(newTrack) // Zwrócenie odpowiedzi z nowo dodanym utworem
+			await newTrack.save() // Save the new track to MongoDB
+			res.status(201).json(newTrack) // Return the newly added track
 		} catch (error) {
-			console.error('Błąd podczas zapisu utworu do bazy danych:', error)
-			res.status(500).json({ error: 'Nie udało się dodać utworu.' })
+			console.error('Error saving track to database:', error)
+			res.status(500).json({ error: 'Failed to add track.' })
 		}
 	})
 })
 
-// Uruchomienie serwera
+// Start the server
 app.listen(port, () => {
-	console.log(`Serwer działa na http://localhost:${port}`)
+	console.log(`Server running at http://localhost:${port}`)
 })
