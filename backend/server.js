@@ -8,7 +8,16 @@ const path = require('path') // Do pracy ze ścieżkami plików
 const ffmpeg = require('fluent-ffmpeg') // Import ffmpeg
 const Track = require('./models/Track') // Import modelu Track
 const app = express()
+const fs = require('fs')
+const path = require('path')
 const port = process.env.PORT || 3000
+
+const uploadDir = path.join(__dirname, 'uploads')
+
+// Sprawdź, czy katalog istnieje, jeśli nie, utwórz go
+if (!fs.existsSync(uploadDir)) {
+	fs.mkdirSync(uploadDir, { recursive: true })
+}
 
 // 1. Połączenie z MongoDB
 mongoose
