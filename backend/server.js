@@ -3,9 +3,11 @@ const express = require('express')
 const cors = require('cors') // Import CORS
 const axios = require('axios')
 const mongoose = require('mongoose') // Import Mongoose
+const multer = require('multer') // Import Multer
+const path = require('path') // Do pracy ze ścieżkami plików
+const ffmpeg = require('fluent-ffmpeg') // Import ffmpeg
+const Track = require('./models/Track') // Import modelu Track
 const app = express()
-const Track = require('./models/Track')
-const ffmpeg = require('fluent-ffmpeg')
 const port = 3000
 
 // 1. Połączenie z MongoDB
@@ -29,6 +31,18 @@ app.use(
 		origin: 'https://dagankplaylist.netlify.app', // Zastąp URL swojej strony Netlify
 	})
 )
+
+// Konfiguracja multer do obsługi uploadu plików
+const storage = multer.diskStorage({
+	destination: (req, file, cb) => {
+		cb(null, 'uploads/') // Ścieżka do katalogu, gdzie będą przechowywane pliki
+	},
+	filename: (req, file, cb) => {
+		cb(null, Date.now() + path.extname(file.originalname)) // Nazwa pliku z unikalnym timestampem
+	},
+})
+
+const upload = multer({ storage: storage }) // Inicjalizacja multer z powyższą konfiguracją
 
 // Strona główna — teraz załaduje plik index.html z folderu 'public'
 app.get('/', (req, res) => {
@@ -88,6 +102,7 @@ app.get('/auth/discord/callback', async (req, res) => {
 	}
 })
 
+// Trasa do pobierania utworów
 app.get('/api/tracks', async (req, res) => {
 	try {
 		const tracks = await Track.find() // Pobiera wszystkie utwory z bazy
@@ -97,38 +112,39 @@ app.get('/api/tracks', async (req, res) => {
 	}
 })
 
+// Trasa do dodawania nowego utworu
 app.post('/api/tracks', upload.single('songFile'), (req, res) => {
-    const filePath = path.join(__dirname, 'uploads', req.file.filename); // Ścieżka do pliku
+	const filePath = path.join(__dirname, 'uploads', req.file.filename) // Ścieżka do pliku
 
-    // Ustalanie długości utworu za pomocą ffmpeg
-    ffmpeg.ffprobe(filePath, async (err, metadata) => {
-        if (err) {
-            console.error('Błąd podczas analizy pliku audio:', err);
-            return res.status(500).json({ error: 'Nie udało się ustalić długości utworu.' });
-        }
+	// Ustalanie długości utworu za pomocą ffmpeg
+	ffmpeg.ffprobe(filePath, async (err, metadata) => {
+		if (err) {
+			console.error('Błąd podczas analizy pliku audio:', err)
+			return res.status(500).json({ error: 'Nie udało się ustalić długości utworu.' })
+		}
 
-        // Obliczanie czasu trwania utworu w formacie MM:SS
-        const durationInSeconds = Math.floor(metadata.format.duration);
-        const minutes = Math.floor(durationInSeconds / 60);
-        const seconds = durationInSeconds % 60;
-        const formattedDuration = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+		// Obliczanie czasu trwania utworu w formacie MM:SS
+		const durationInSeconds = Math.floor(metadata.format.duration)
+		const minutes = Math.floor(durationInSeconds / 60)
+		const seconds = durationInSeconds % 60
+		const formattedDuration = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`
 
-        // Tworzenie nowego rekordu utworu
-        try {
-            const newTrack = new Track({
-                title: req.body.songTitle,
-                file: `/uploads/${req.file.filename}`, // Ścieżka do pliku
-                duration: formattedDuration, // Obliczony czas trwania
-            });
+		// Tworzenie nowego rekordu utworu
+		try {
+			const newTrack = new Track({
+				title: req.body.songTitle,
+				file: `/uploads/${req.file.filename}`, // Ścieżka do pliku
+				duration: formattedDuration, // Obliczony czas trwania
+			})
 
-            await newTrack.save(); // Zapisanie nowego utworu do MongoDB
-            res.status(201).json(newTrack); // Zwrócenie odpowiedzi z nowo dodanym utworem
-        } catch (error) {
-            console.error('Błąd podczas zapisu utworu do bazy danych:', error);
-            res.status(500).json({ error: 'Nie udało się dodać utworu.' });
-        }
-    });
-});
+			await newTrack.save() // Zapisanie nowego utworu do MongoDB
+			res.status(201).json(newTrack) // Zwrócenie odpowiedzi z nowo dodanym utworem
+		} catch (error) {
+			console.error('Błąd podczas zapisu utworu do bazy danych:', error)
+			res.status(500).json({ error: 'Nie udało się dodać utworu.' })
+		}
+	})
+})
 
 app.listen(port, () => {
 	console.log(`Serwer działa na http://localhost:${port}`)
