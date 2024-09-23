@@ -19,7 +19,10 @@ const volumeControl = document.querySelector('.music-loudness')
 // Dynamic loading of track list
 async function loadTracks() {
 	try {
-		const response = await fetch('/api/tracks')
+		const response = await fetch(`${backendUrl}/api/tracks`)
+		if (!response.ok) {
+			throw new Error('Failed to load tracks')
+		}
 		const tracks = await response.json()
 
 		const trackList = document.querySelector('.track-list')
@@ -38,7 +41,8 @@ async function loadTracks() {
                 <span class="track-plays">${track.plays}</span>
                 <span class="track-duration">${track.duration}</span>
             `
-			trackElement.addEventListener('click', () => playTrackByIndex(index))
+			// Add event listener to play the track when clicked
+			trackElement.addEventListener('click', () => playTrackByIndex(index, tracks))
 			trackList.appendChild(trackElement)
 		})
 	} catch (error) {
@@ -47,7 +51,7 @@ async function loadTracks() {
 }
 
 // Function to play the selected track by index
-function playTrackByIndex(index) {
+function playTrackByIndex(index, tracks) {
 	if (currentTrackIndex === index && currentAudio) {
 		if (currentAudio.paused) {
 			currentAudio.play()
@@ -68,12 +72,9 @@ function playTrackByIndex(index) {
 	}
 
 	currentTrackIndex = index
-
-	const track = document.querySelectorAll('.track')[index]
-	const playIcon = track.querySelector('.play-track-icon')
-	const songSrc = playIcon.getAttribute('data-src')
-	const songTitle = track.querySelector('.track-title').textContent
-	const songImage = track.querySelector('.track-image').src
+	const track = tracks[index]
+	const songSrc = track.file
+	const songTitle = track.title
 
 	currentAudio = new Audio(songSrc)
 	currentAudio.volume = currentVolume
@@ -86,7 +87,7 @@ function playTrackByIndex(index) {
 	currentAudio.play()
 
 	document.querySelector('.music-player-song-title').textContent = songTitle
-	document.querySelector('.music-player-img').src = songImage
+	document.querySelector('.music-player-img').src = './img/da gank members/me.webp' // Placeholder for image
 
 	updateActiveTrack()
 	updatePlayPauseButtons(true)
@@ -302,5 +303,5 @@ document.querySelector('.log-in-btn').addEventListener('click', () => {
 
 window.addEventListener('DOMContentLoaded', () => {
 	handleUserLogin()
-	loadTracks()
+	loadTracks() // Load the tracks after the page is fully loaded
 })
