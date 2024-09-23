@@ -1,4 +1,4 @@
-const backendUrl = 'https://dagankplaylist.onrender.com' // URL backendu
+const backendUrl = 'https://dagankplaylist.onrender.com' // Backend URL
 
 // Initialize variables
 let currentAudio = null // Stores the current audio player
@@ -16,7 +16,7 @@ const pauseBtn = document.querySelector('.music-player-pause-btn')
 const songProgress = document.querySelector('.song-progress')
 const volumeControl = document.querySelector('.music-loudness')
 
-// Dynamic loading of track list
+// Dynamically load the track list from the backend
 async function loadTracks() {
 	try {
 		const response = await fetch(`${backendUrl}/api/tracks`)
@@ -26,8 +26,9 @@ async function loadTracks() {
 		const tracks = await response.json()
 
 		const trackList = document.querySelector('.track-list')
-		trackList.innerHTML = '' // Clear existing list
+		trackList.innerHTML = '' // Clear the existing list
 
+		// Populate the track list with tracks from the response
 		tracks.forEach((track, index) => {
 			const trackElement = document.createElement('li')
 			trackElement.classList.add('track')
@@ -41,7 +42,7 @@ async function loadTracks() {
                 <span class="track-plays">${track.plays}</span>
                 <span class="track-duration">${track.duration}</span>
             `
-			// Add event listener to play the track when clicked
+			// Add an event listener to play the track when clicked
 			trackElement.addEventListener('click', () => playTrackByIndex(index, tracks))
 			trackList.appendChild(trackElement)
 		})
@@ -50,7 +51,7 @@ async function loadTracks() {
 	}
 }
 
-// Function to play the selected track by index
+// Function to play a selected track by index
 function playTrackByIndex(index, tracks) {
 	if (currentTrackIndex === index && currentAudio) {
 		if (currentAudio.paused) {
@@ -63,6 +64,7 @@ function playTrackByIndex(index, tracks) {
 		return
 	}
 
+	// If a track is already playing, stop it
 	if (currentAudio) {
 		currentAudio.pause()
 		currentAudio.currentTime = 0
@@ -76,40 +78,50 @@ function playTrackByIndex(index, tracks) {
 	const songSrc = track.file
 	const songTitle = track.title
 
+	// Initialize the new audio player
 	currentAudio = new Audio(songSrc)
 	currentAudio.volume = currentVolume
 	currentAudio.muted = isMuted
 
+	// Reset progress bar and current time display
 	songProgress.value = 0
 	document.querySelector('.time-current').textContent = '0:00'
 	document.querySelector('.time-total').textContent = '0:00'
 
+	// Play the track
 	currentAudio.play()
 
+	// Update the UI for the music player
 	document.querySelector('.music-player-song-title').textContent = songTitle
 	document.querySelector('.music-player-img').src = './img/da gank members/me.webp' // Placeholder for image
 
+	// Update track and play/pause buttons
 	updateActiveTrack()
 	updatePlayPauseButtons(true)
 
+	// Set event listeners for the audio player
 	currentAudio.addEventListener('loadedmetadata', updateDuration)
 	currentAudio.addEventListener('timeupdate', updateProgressBar)
 	currentAudio.addEventListener('ended', handleTrackEnd)
 }
 
+// Update the total track duration display
 function updateDuration() {
 	document.querySelector('.time-total').textContent = formatTime(currentAudio.duration)
 }
 
+// Handle when a track ends
 function handleTrackEnd() {
 	playNextTrack()
 }
 
+// Play the next track in the list
 function playNextTrack() {
 	let nextIndex = (currentTrackIndex + 1) % document.querySelectorAll('.track').length
 	playTrackByIndex(nextIndex)
 }
 
+// Play the previous track in the list
 function playPreviousTrack() {
 	let prevIndex =
 		(currentTrackIndex - 1 + document.querySelectorAll('.track').length) % document.querySelectorAll('.track').length
@@ -120,6 +132,7 @@ function playPreviousTrack() {
 document.querySelector('.next-btn').addEventListener('click', playNextTrack)
 document.querySelector('.previous-btn').addEventListener('click', playPreviousTrack)
 
+// Toggle play/pause functionality
 function togglePlayPause() {
 	if (currentAudio) {
 		if (currentAudio.paused) {
@@ -132,9 +145,11 @@ function togglePlayPause() {
 	}
 }
 
+// Event listeners for play and pause buttons
 playBtn.addEventListener('click', togglePlayPause)
 pauseBtn.addEventListener('click', togglePlayPause)
 
+// Update the progress bar as the track plays
 function updateProgressBar() {
 	const currentTime = document.querySelector('.time-current')
 
@@ -145,6 +160,7 @@ function updateProgressBar() {
 	}
 }
 
+// Handle dragging and changing the progress of the track
 songProgress.addEventListener('input', function () {
 	isDragging = true
 	if (currentAudio && currentAudio.duration) {
@@ -158,6 +174,7 @@ songProgress.addEventListener('change', function () {
 	isDragging = false
 })
 
+// Handle changing the volume with the volume slider
 volumeControl.addEventListener('input', function () {
 	currentVolume = volumeControl.value / 100
 	if (currentAudio) {
@@ -166,12 +183,14 @@ volumeControl.addEventListener('input', function () {
 	updateVolumeIcon()
 })
 
+// Format seconds into MM:SS
 function formatTime(seconds) {
 	const minutes = Math.floor(seconds / 60)
 	const sec = Math.floor(seconds % 60)
 	return `${minutes}:${sec < 10 ? '0' : ''}${sec}`
 }
 
+// Toggle mute on/off
 function toggleMute() {
 	const speakerIcon = document.querySelector('.speaker-btn i')
 
@@ -194,6 +213,7 @@ function toggleMute() {
 	}
 }
 
+// Update the speaker icon based on the current volume
 function updateVolumeIcon() {
 	const speakerIcon = document.querySelector('.speaker-btn i')
 
@@ -212,8 +232,10 @@ function updateVolumeIcon() {
 	}
 }
 
+// Event listener for the mute button
 document.querySelector('.speaker-btn').addEventListener('click', toggleMute)
 
+// Update the active track title and play/pause icons
 function updateActiveTrack() {
 	const trackList = document.querySelectorAll('.track')
 	trackList.forEach(track => {
@@ -230,6 +252,7 @@ function updateActiveTrack() {
 	title.classList.add('active')
 }
 
+// Update play/pause buttons in the music player and track list
 function updatePlayPauseButtons(isPlaying) {
 	if (isPlaying) {
 		playBtn.style.display = 'none'
@@ -265,6 +288,7 @@ function updatePlayPauseButtons(isPlaying) {
 	}
 }
 
+// Event listener for the top play button
 topPlayBtn.addEventListener('click', function () {
 	if (currentTrackIndex === null) {
 		playTrackByIndex(0)
@@ -297,10 +321,12 @@ function handleUserLogin() {
 	}
 }
 
+// Event listener for the login button
 document.querySelector('.log-in-btn').addEventListener('click', () => {
 	window.location.href = `${backendUrl}/auth/discord`
 })
 
+// Load tracks and handle user login on page load
 window.addEventListener('DOMContentLoaded', () => {
 	handleUserLogin()
 	loadTracks() // Load the tracks after the page is fully loaded
