@@ -144,6 +144,11 @@ app.post('/api/tracks', upload.single('songFile'), (req, res) => {
 				title: req.body.songTitle,
 				file: fileUrl, // Full URL to the file
 				duration: formattedDuration, // Calculated duration
+				addedBy: {
+					id: req.body.userId,
+					username: req.body.username,
+					avatar: req.body.avatar,
+				},
 			})
 
 			await newTrack.save() // Save the new track to MongoDB

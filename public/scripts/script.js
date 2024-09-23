@@ -20,6 +20,63 @@
 	const pauseBtn = document.querySelector('.music-player-pause-btn')
 	const songProgress = document.querySelector('.song-progress')
 	const volumeControl = document.querySelector('.music-loudness')
+	const addBtn = document.querySelector('.add-btn') // The "Add Song" button
+
+	// Function to handle user login and update the UI
+	function handleUserLogin() {
+		const urlParams = new URLSearchParams(window.location.search)
+		const username = urlParams.get('username')
+		const avatar = urlParams.get('avatar')
+		const id = urlParams.get('id')
+
+		// Check if there is user data in the URL
+		if (username && avatar && id) {
+			// Save user data in localStorage for future sessions
+			localStorage.setItem('discordUser', JSON.stringify({ username, avatar, id }))
+
+			// Remove URL parameters
+			window.history.replaceState({}, document.title, window.location.pathname)
+		}
+
+		// Check if there is user data in localStorage
+		const storedUser = localStorage.getItem('discordUser')
+		const loginBtns = document.querySelector('.login-btns')
+
+		if (storedUser) {
+			const user = JSON.parse(storedUser)
+
+			// Replace login buttons with the user's profile picture
+			if (loginBtns) {
+				loginBtns.innerHTML = `
+                    <img class="nav-img" src="https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png" alt="${user.username}">
+                `
+			}
+
+			// Show the "Add Song" button
+			if (addBtn) {
+				addBtn.style.display = 'inline-block'
+			}
+		} else {
+			// User is not logged in
+			if (loginBtns) {
+				loginBtns.innerHTML = `
+                    <button class="main-btn log-in-btn">Log in</button>
+                `
+				// Add event listener to the login button
+				const loginBtn = loginBtns.querySelector('.log-in-btn')
+				if (loginBtn) {
+					loginBtn.addEventListener('click', () => {
+						window.location.href = `${backendUrl}/auth/discord`
+					})
+				}
+			}
+
+			// Hide the "Add Song" button
+			if (addBtn) {
+				addBtn.style.display = 'none'
+			}
+		}
+	}
 
 	// Dynamically load the track list from the backend
 	async function loadTracks() {
@@ -37,18 +94,27 @@
 			tracks.forEach((track, index) => {
 				const trackElement = document.createElement('li')
 				trackElement.classList.add('track')
+
+				// Get the track image source
+				let trackImageSrc = './img/default-track-image.png' // Default image
+				if (track.addedBy && track.addedBy.id && track.addedBy.avatar) {
+					trackImageSrc = `https://cdn.discordapp.com/avatars/${track.addedBy.id}/${track.addedBy.avatar}.png`
+				}
+
 				trackElement.innerHTML = `
                     <div class="track-main-info">
                         <span class="track-number">${index + 1}</span>
                         <i class="play-track-icon fa-solid fa-play" data-src="${track.file}"></i>
-                        <img class="track-image" src="./img/da gank members/me.webp" alt="Da gank member who added this song">
+                        <img class="track-image" src="${trackImageSrc}" alt="${
+					track.addedBy ? track.addedBy.username : 'Track image'
+				}">
                         <span class="track-title">${track.title}</span>
                     </div>
                     <span class="track-plays">${track.plays}</span>
                     <span class="track-duration">${track.duration}</span>
                 `
-				// Add an event listener to play the track when clicked
-				trackElement.addEventListener('click', () => playTrackByIndex(index))
+				// Add event listener to play the track when clicked
+				trackElement.querySelector('.play-track-icon').addEventListener('click', () => playTrackByIndex(index))
 				trackList.appendChild(trackElement)
 			})
 
@@ -100,7 +166,12 @@
 
 		// Update the UI for the music player
 		document.querySelector('.music-player-song-title').textContent = songTitle
-		document.querySelector('.music-player-img').src = './img/da gank members/me.webp' // Placeholder for image
+		// Update the player image to the track image
+		let trackImageSrc = './img/default-track-image.png' // Default image
+		if (track.addedBy && track.addedBy.id && track.addedBy.avatar) {
+			trackImageSrc = `https://cdn.discordapp.com/avatars/${track.addedBy.id}/${track.addedBy.avatar}.png`
+		}
+		document.querySelector('.music-player-img').src = trackImageSrc
 
 		// Update track and play/pause buttons
 		updateActiveTrack()
@@ -292,30 +363,6 @@
 		} else {
 			topPlayIcon.classList.remove('fa-pause')
 			topPlayIcon.classList.add('fa-play')
-		}
-	}
-
-	// Discord login functionality
-	function handleUserLogin() {
-		const urlParams = new URLSearchParams(window.location.search)
-		const username = urlParams.get('username')
-		const avatar = urlParams.get('avatar')
-		const id = urlParams.get('id')
-
-		if (username && avatar && id) {
-			localStorage.setItem('discordUser', JSON.stringify({ username, avatar, id }))
-			window.history.replaceState({}, document.title, window.location.pathname)
-		}
-
-		const storedUser = localStorage.getItem('discordUser')
-		if (storedUser) {
-			const user = JSON.parse(storedUser)
-			const loginBtns = document.querySelector('.login-btns')
-			if (loginBtns) {
-				loginBtns.innerHTML = `
-                    <img class="nav-img" src="https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png" alt="${user.username}">
-                `
-			}
 		}
 	}
 

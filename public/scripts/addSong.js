@@ -18,8 +18,20 @@
 		songUploadForm.reset() // Reset the form fields
 	}
 
+	// Check if the user is logged in
+	function isUserLoggedIn() {
+		const storedUser = localStorage.getItem('discordUser')
+		return storedUser !== null
+	}
+
 	// Event handler for the 'add-btn' click
-	addBtn.addEventListener('click', showAddSongModal)
+	addBtn.addEventListener('click', () => {
+		if (isUserLoggedIn()) {
+			showAddSongModal()
+		} else {
+			alert('Please log in to add a song.')
+		}
+	})
 
 	// Close the modal when clicking outside of it
 	addSongModal.addEventListener('click', event => {
@@ -35,6 +47,19 @@
 		// Collect data from the form
 		const formData = new FormData(songUploadForm)
 
+		// Get user data
+		const storedUser = localStorage.getItem('discordUser')
+		if (storedUser) {
+			const user = JSON.parse(storedUser)
+			formData.append('userId', user.id)
+			formData.append('username', user.username)
+			formData.append('avatar', user.avatar)
+		} else {
+			// User is not logged in
+			alert('You must be logged in to add a song.')
+			return
+		}
+
 		try {
 			// Send data to the API
 			const response = await fetch('https://dagankplaylist.onrender.com/api/tracks', {
@@ -43,7 +68,7 @@
 			})
 
 			if (response.ok) {
-				const newTrack = await response.json() // The newly added track
+				const newTrack = await response.json()
 				console.log('Track added:', newTrack)
 				hideAddSongModal() // Hide the modal after adding the track
 				window.loadTracks() // Call the loadTracks() function from script.js
