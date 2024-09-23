@@ -1,10 +1,6 @@
 const backendUrl="https://dagankplaylist.onrender.com"
 
 // Event listeners for the buttons
-document.querySelector('.sign-up-btn').addEventListener('click', () => {
-	window.location.href = `${backendUrl}/auth/discord` // Redirect to backend route
-})
-
 document.querySelector('.log-in-btn').addEventListener('click', () => {
 	window.location.href = `${backendUrl}/auth/discord` // Redirect to backend route
 })
