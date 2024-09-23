@@ -1,4 +1,7 @@
-const backendUrl="https://dagankplaylist.onrender.com"
+// Sprawdzamy, czy backendUrl nie jest już zdefiniowany
+if (typeof backendUrl === 'undefined') {
+	const backendUrl = 'https://dagankplaylist.onrender.com'
+}
 
 // Event listeners for the buttons
 document.querySelector('.log-in-btn').addEventListener('click', () => {
