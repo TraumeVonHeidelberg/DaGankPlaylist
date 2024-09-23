@@ -9,7 +9,6 @@ const ffmpeg = require('fluent-ffmpeg') // Import ffmpeg
 const Track = require('./models/Track') // Import modelu Track
 const app = express()
 const fs = require('fs')
-const path = require('path')
 const port = process.env.PORT || 3000
 
 const uploadDir = path.join(__dirname, 'uploads')
