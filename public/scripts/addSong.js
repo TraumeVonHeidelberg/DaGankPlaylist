@@ -1,84 +1,59 @@
-// Elementy modala
-const addBtn = document.querySelector('.add-btn')
-const addSongModal = document.getElementById('addSongModal')
-const modalContent = document.querySelector('.modal-content')
-const songUploadForm = document.getElementById('song-upload-form')
+// addSong.js
 
-// Funkcja wyświetlania modala
-function showAddSongModal() {
-	addSongModal.style.display = 'flex' // Wyświetl modal
-}
+// Wrap the code in an IIFE to prevent global scope pollution
+;(function () {
+	// Elements related to the modal
+	const addBtn = document.querySelector('.add-btn')
+	const addSongModal = document.getElementById('addSongModal')
+	const songUploadForm = document.getElementById('song-upload-form')
 
-// Funkcja ukrywania modala
-function hideAddSongModal() {
-	addSongModal.style.display = 'none' // Ukryj modal
-}
-
-// Obsługa kliknięcia w przycisk 'add-btn'
-addBtn.addEventListener('click', showAddSongModal)
-
-// Zamknięcie modala po kliknięciu poza jego obszarem
-addSongModal.addEventListener('click', event => {
-	if (event.target === addSongModal) {
-		hideAddSongModal() // Ukryj modal, gdy klikniesz poza modalem
+	// Function to display the modal
+	function showAddSongModal() {
+		addSongModal.style.display = 'flex' // Display the modal
 	}
-})
 
-// Funkcja do dynamicznego załadowania utworów (aktualizacja listy utworów po dodaniu nowego)
-async function loadTracks() {
-	try {
-		const response = await fetch('https://dagankplaylist.onrender.com/api/tracks') // Pobierz listę utworów z API
-		if (response.ok) {
-			const tracks = await response.json() // Parsowanie odpowiedzi
-			const trackList = document.querySelector('.track-list') // Element listy utworów
-			trackList.innerHTML = '' // Wyczyszczenie aktualnej listy
+	// Function to hide the modal
+	function hideAddSongModal() {
+		addSongModal.style.display = 'none' // Hide the modal
+		songUploadForm.reset() // Reset the form fields
+	}
 
-			tracks.forEach((track, index) => {
-				const trackElement = document.createElement('li')
-				trackElement.classList.add('track')
-				trackElement.innerHTML = `
-                    <div class="track-main-info">
-                        <span class="track-number">${index + 1}</span>
-                        <i class="play-track-icon fa-solid fa-play" data-src="${track.file}"></i>
-                        <img class="track-image" src="./img/da gank members/me.webp" alt="Da gank member who added this song">
-                        <span class="track-title">${track.title}</span>
-                    </div>
-                    <span class="track-plays">0</span>
-                    <span class="track-duration">${track.duration}</span>
-                `
-				trackList.appendChild(trackElement) // Dodanie utworu do listy
+	// Event handler for the 'add-btn' click
+	addBtn.addEventListener('click', showAddSongModal)
+
+	// Close the modal when clicking outside of it
+	addSongModal.addEventListener('click', event => {
+		if (event.target === addSongModal) {
+			hideAddSongModal() // Hide the modal when clicking outside of it
+		}
+	})
+
+	// Handle the form submission (adding a new track)
+	songUploadForm.addEventListener('submit', async event => {
+		event.preventDefault() // Prevent the default form submission behavior
+
+		// Collect data from the form
+		const formData = new FormData(songUploadForm)
+
+		try {
+			// Send data to the API
+			const response = await fetch('https://dagankplaylist.onrender.com/api/tracks', {
+				method: 'POST',
+				body: formData,
 			})
-		} else {
-			console.error('Błąd podczas pobierania listy utworów.')
+
+			if (response.ok) {
+				const newTrack = await response.json() // The newly added track
+				console.log('Track added:', newTrack)
+				hideAddSongModal() // Hide the modal after adding the track
+				window.loadTracks() // Call the loadTracks() function from script.js
+			} else {
+				console.error('Error adding track.')
+				alert('An error occurred while adding the track. Please try again.')
+			}
+		} catch (error) {
+			console.error('Error submitting form:', error)
+			alert('An error occurred while submitting the form. Please try again.')
 		}
-	} catch (error) {
-		console.error('Błąd podczas ładowania listy utworów:', error)
-	}
-}
-
-// Obsługa wysyłania formularza (dodawanie nowego utworu)
-songUploadForm.addEventListener('submit', async event => {
-	event.preventDefault() // Zapobiegamy domyślnemu zachowaniu formularza
-
-	// Zbieranie danych z formularza
-	const formData = new FormData(songUploadForm)
-
-	try {
-		// Wysłanie danych do API
-		const response = await fetch('https://dagankplaylist.onrender.com/api/tracks', {
-			method: 'POST',
-			body: formData,
-		})
-
-		if (response.ok) {
-			const newTrack = await response.json() // Nowy dodany utwór
-			console.log('Utwór został dodany:', newTrack)
-			hideAddSongModal() // Ukryj modal po dodaniu utworu
-			loadTracks() // Odśwież listę utworów po dodaniu nowego
-		} else {
-			console.error('Błąd podczas dodawania utworu.')
-		}
-	} catch (error) {
-		console.error('Błąd podczas wysyłania formularza:', error)
-	}
-})
+	})
+})()
