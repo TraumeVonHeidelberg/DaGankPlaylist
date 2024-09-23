@@ -1,9 +1,24 @@
-require('dotenv').config()
+require('dotenv').config() // Załaduj zmienne środowiskowe
 const express = require('express')
 const cors = require('cors') // Import CORS
 const axios = require('axios')
+const mongoose = require('mongoose') // Import Mongoose
 const app = express()
+const Track = require('./models/Track')
 const port = 3000
+
+// 1. Połączenie z MongoDB
+mongoose
+	.connect(process.env.MONGODB_URI, {
+		useNewUrlParser: true,
+		useUnifiedTopology: true,
+	})
+	.then(() => {
+		console.log('Połączono z MongoDB')
+	})
+	.catch(err => {
+		console.error('Błąd połączenia z MongoDB:', err)
+	})
 
 // Obsługa plików statycznych z folderu 'public'
 app.use(express.static('../public'))
@@ -71,6 +86,31 @@ app.get('/auth/discord/callback', async (req, res) => {
 		res.redirect('/error')
 	}
 })
+
+app.get('/api/tracks', async (req, res) => {
+	try {
+		const tracks = await Track.find() // Pobiera wszystkie utwory z bazy
+		res.json(tracks)
+	} catch (error) {
+		res.status(500).json({ error: 'Nie udało się pobrać utworów.' })
+	}
+})
+
+app.post('/api/tracks', upload.single('songFile'), async (req, res) => {
+    try {
+        const newTrack = new Track({
+            title: req.body.songTitle,
+            file: `/uploads/${req.file.filename}`, // Ścieżka do pliku
+            duration: req.body.duration // Zakładamy, że dostarczasz czas trwania z formularza
+        });
+
+        await newTrack.save(); // Zapisanie nowego utworu do MongoDB
+
+        res.status(201).json(newTrack);
+    } catch (error) {
+        res.status(500).json({ error: 'Nie udało się dodać utworu.' });
+    }
+});
 
 app.listen(port, () => {
 	console.log(`Serwer działa na http://localhost:${port}`)
