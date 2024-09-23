@@ -49,9 +49,15 @@
                 <p class="monthly-listeners">0 montly listeners</p>
             </header>
             <section class="play-section">
-                <button class="play-btn">
-                    <i class="play-icon fa-solid fa-play"></i>
-                </button>
+                <div class="control-panel">
+                    <button class="control-panel-btn play-btn">
+                        <i class="play-icon fa-solid fa-play"></i>
+                    </button>
+                    <button class="control-panel-btn add-btn">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
+
                 <h2 class="music-list-header">Tracks</h2>
 
                 <ul class="track-list">
@@ -161,9 +167,24 @@
         </section>
     </main>
 
+    <div class="add-song-modal" id="addSongModal">
+        <form class="modal-content" id="song-upload-form">
+            <div class="form-field">
+                <label for="song-title">Song Title</label>
+                <input type="text" id="song-title" name="song-title" required>
+            </div>
+            <div class="form-field">
+                <label for="song-file">Upload Song</label>
+                <input type="file" id="song-file" name="song-file" accept="audio/*" required>
+            </div>
+
+            <button class="submit-btn" type="submit">Submit</button>
+        </form>
+    </div>
 
     <script src="./scripts/script.js"></script>
     <script src="./scripts/login.js"></script>
+    <script src="./scripts/addSong.js"></script>
 </body>
 
 </html>
