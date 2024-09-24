@@ -9,8 +9,8 @@ const multer = require('multer') // Import Multer
 const path = require('path') // For working with file paths
 const ffmpeg = require('fluent-ffmpeg') // Import ffmpeg
 const Track = require('./models/Track') // Import Track model
-const { CloudinaryStorage } = require('multer-storage-cloudinary') // Import Cloudinary Storage
 const cloudinary = require('cloudinary').v2 // Import Cloudinary
+const { Readable } = require('stream') // For streaming buffer to Cloudinary
 const app = express()
 const port = process.env.PORT || 3000
 
@@ -21,17 +21,8 @@ cloudinary.config({
 	api_secret: process.env.CLOUDINARY_API_SECRET,
 })
 
-// Multer configuration for Cloudinary storage
-const storage = new CloudinaryStorage({
-	cloudinary: cloudinary,
-	params: {
-		folder: 'music_tracks', // Folder in Cloudinary
-		allowed_formats: ['mp3', 'wav', 'ogg', 'flac'], // Allowed audio formats
-		public_id: (req, file) => `${Date.now()}-${path.parse(file.originalname).name}`, // Unique filename
-	},
-})
-
-// Multer upload instance
+// Multer configuration: store files in memory
+const storage = multer.memoryStorage()
 const upload = multer({
 	storage: storage,
 	limits: { fileSize: 100 * 1024 * 1024 }, // 100 MB limit
@@ -126,7 +117,8 @@ app.get('/auth/discord/callback', async (req, res) => {
 
 		const user = userResponse.data
 
-		// Redirect to homepage with user data in query string
+		// Store user data in localStorage or session (you may need to adjust based on your frontend setup)
+		// Here, we're redirecting to the frontend with query parameters
 		res.redirect(
 			`/?username=${encodeURIComponent(user.username)}&avatar=${encodeURIComponent(
 				user.avatar
@@ -153,63 +145,63 @@ app.get('/api/tracks', async (req, res) => {
 	}
 })
 
+// Middleware to authenticate user
+function authenticateUser(req, res, next) {
+	const { userId, username, avatar } = req.body
+	if (userId && username && avatar) {
+		// Możesz dodać dodatkową weryfikację tutaj
+		next()
+	} else {
+		res.status(401).json({ error: 'Unauthorized' })
+	}
+}
+
 // Route to add a new track
-app.post('/api/tracks', upload.single('songFile'), async (req, res) => {
+app.post('/api/tracks', authenticateUser, upload.single('songFile'), async (req, res) => {
 	if (!req.file) {
 		return res.status(400).json({ error: 'No file uploaded.' })
 	}
 
-	const fileUrl = req.file.path // Cloudinary URL
-	const filePublicId = req.file.filename // Cloudinary public ID
+	const fileBuffer = req.file.buffer
+	const originalName = req.file.originalname
+	const uniqueFilename = `${Date.now()}-${path.parse(originalName).name}`
 
-	// To get the duration, we need to download the file temporarily or use another approach
-	// Cloudinary does not provide audio duration metadata out of the box
-	// A workaround is to fetch the file and analyze it with ffmpeg
-	// Alternatively, you can use a third-party service or library that can fetch duration from URL
-
-	// For simplicity, let's fetch the file and get the duration
 	try {
-		// Fetch the audio file as a buffer
-		const response = await axios.get(fileUrl, { responseType: 'arraybuffer' })
-		const buffer = Buffer.from(response.data, 'binary')
-
-		// Save buffer to a temporary file
-		const tempFilePath = path.join(__dirname, 'temp', `${filePublicId}${path.extname(req.file.originalname)}`)
-
-		// Ensure the temporary directory exists
-		const tempDir = path.join(__dirname, 'temp')
-		if (!fs.existsSync(tempDir)) {
-			fs.mkdirSync(tempDir, { recursive: true })
-		}
-
-		// Write buffer to temp file
-		fs.writeFileSync(tempFilePath, buffer)
-
-		// Get duration using ffmpeg
-		const durationInSeconds = await new Promise((resolve, reject) => {
-			ffmpeg.ffprobe(tempFilePath, (err, metadata) => {
-				if (err) {
-					reject(err)
-				} else {
-					resolve(Math.floor(metadata.format.duration))
+		// Upload to Cloudinary
+		const uploadResult = await new Promise((resolve, reject) => {
+			const uploadStream = cloudinary.uploader.upload_stream(
+				{
+					folder: 'music_tracks', // Folder in Cloudinary
+					public_id: uniqueFilename, // Unique filename
+					resource_type: 'auto', // Automatically detect resource type
+				},
+				(error, result) => {
+					if (error) {
+						reject(error)
+					} else {
+						resolve(result)
+					}
 				}
-			})
+			)
+			Readable.from(fileBuffer).pipe(uploadStream)
 		})
 
-		// Calculate MM:SS format
+		const fileUrl = uploadResult.secure_url
+		const filePublicId = uploadResult.public_id
+
+		// Cloudinary provides 'duration' in metadata for audio files
+		const durationInSeconds = Math.floor(uploadResult.duration)
 		const minutes = Math.floor(durationInSeconds / 60)
 		const seconds = durationInSeconds % 60
 		const formattedDuration = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`
 
-		// Delete the temporary file
-		fs.unlinkSync(tempFilePath)
-
-		// Create a new track record
+		// Validate that songTitle is provided
 		const songTitle = req.body.songTitle
 		if (!songTitle || songTitle.trim() === '') {
 			return res.status(400).json({ error: 'Song title is required.' })
 		}
 
+		// Create a new track record
 		const newTrack = new Track({
 			title: songTitle,
 			file: fileUrl, // Cloudinary URL
