@@ -320,7 +320,7 @@
 		currentAudio.addEventListener('ended', handleTrackEnd)
 		currentAudio.addEventListener('error', handleAudioError)
 
-		// Play the track
+		// Play the track with enhanced error handling
 		currentAudio
 			.play()
 			.then(() => {
@@ -328,6 +328,8 @@
 			})
 			.catch(error => {
 				console.error('Error playing audio:', error)
+				alert(`Cannot play the track "${songTitle}". It might be missing or corrupted.`)
+				playNextTrack()
 			})
 	}
 
@@ -357,6 +359,9 @@
 
 	// Function to set the first valid track as default in the music player
 	async function setDefaultTrack() {
+		// Only set default track if no track is currently playing
+		if (currentTrackIndex !== null) return
+
 		// Reverse the tracks array to have the newest tracks first
 		const reversedTracks = [...tracks].reverse()
 
@@ -368,7 +373,7 @@
 				// Attempt to load the audio file
 				await testAudioFile(songSrc)
 				// If successful, set it as the default track
-				const originalIndex = tracks.findIndex(t => t._id === track._id) // Assuming each track has a unique _id
+				const originalIndex = tracks.findIndex(t => t._id === track._id || t.id === track.id) // Adjust if different unique identifier
 				if (originalIndex !== -1) {
 					playTrackByIndex(originalIndex)
 				}
@@ -414,7 +419,9 @@
 
 			// Populate the track list with tracks from the response
 			reversedTracks.forEach((track, index) => {
-				const originalIndex = tracks.findIndex(t => t._id === track._id) // Assuming each track has a unique _id
+				// Determine the original index in the tracks array
+				const originalIndex = tracks.findIndex(t => t._id === track._id || t.id === track.id) // Adjust if different unique identifier
+
 				const trackElement = document.createElement('li')
 				trackElement.classList.add('track')
 
@@ -453,7 +460,7 @@
 				trackList.appendChild(trackElement)
 			})
 
-			// Set the first valid track as default in the music player
+			// Set the first valid track as default in the music player only if no track is playing
 			if (tracks.length > 0) {
 				await setDefaultTrack()
 			}
@@ -461,6 +468,7 @@
 			updateActiveTrack() // Update the UI to reflect the currently active track
 		} catch (error) {
 			console.error('Error loading tracks:', error)
+			alert('Failed to load tracks. Please try again later.')
 		}
 	}
 
