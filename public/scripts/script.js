@@ -3,7 +3,8 @@
 // Wrap the entire code in an IIFE to prevent global scope pollution
 ;(function () {
 	const backendUrl = 'https://dagankplaylist.onrender.com' // Backend URL
-	window.backendUrl = backendUrl;
+	window.backendUrl = backendUrl // Make backendUrl globally accessible
+
 	// Initialize variables
 	let currentAudio = null // Stores the current audio player
 	let currentTrackIndex = null // Index of the currently playing track
@@ -248,6 +249,25 @@
 		}
 	}
 
+	// Function to update the player UI with the current track's information
+	function updatePlayerUI(track) {
+		const songTitleElement = document.querySelector('.music-player-song-title')
+		const musicPlayerImg = document.querySelector('.music-player-img')
+
+		if (songTitleElement) {
+			songTitleElement.textContent = track.title
+		}
+
+		if (musicPlayerImg) {
+			let trackImageSrc = './img/default-track-image.png' // Default image
+			if (track.addedBy && track.addedBy.id && track.addedBy.avatar) {
+				trackImageSrc = `https://cdn.discordapp.com/avatars/${track.addedBy.id}/${track.addedBy.avatar}.png`
+			}
+			musicPlayerImg.src = trackImageSrc
+			musicPlayerImg.alt = track.addedBy ? track.addedBy.username : 'Track image'
+		}
+	}
+
 	// Function to play a selected track by index
 	function playTrackByIndex(index) {
 		if (currentTrackIndex === index && currentAudio) {
@@ -288,28 +308,16 @@
 		currentAudio.muted = isMuted
 
 		// Reset progress bar and current time display
-		songProgress.value = 0
+		if (songProgress) {
+			songProgress.value = 0
+		}
 		const currentTimeDisplay = document.querySelector('.time-current')
 		const totalTimeDisplay = document.querySelector('.time-total')
 		if (currentTimeDisplay) currentTimeDisplay.textContent = '0:00'
 		if (totalTimeDisplay) totalTimeDisplay.textContent = '0:00'
 
 		// Update the UI for the music player
-		const songTitleElement = document.querySelector('.music-player-song-title')
-		if (songTitleElement) {
-			songTitleElement.textContent = songTitle
-		}
-
-		// Update the player image to the track image
-		const musicPlayerImg = document.querySelector('.music-player-img')
-		let trackImageSrc = './img/default-track-image.png' // Default image
-		if (track.addedBy && track.addedBy.id && track.addedBy.avatar) {
-			trackImageSrc = `https://cdn.discordapp.com/avatars/${track.addedBy.id}/${track.addedBy.avatar}.png`
-		}
-		if (musicPlayerImg) {
-			musicPlayerImg.src = trackImageSrc
-			musicPlayerImg.alt = track.addedBy ? track.addedBy.username : 'Track image'
-		}
+		updatePlayerUI(track)
 
 		// Update active track in the track list
 		updateActiveTrack()
@@ -373,6 +381,7 @@
 				currentTrackIndex = i
 				// Update the UI to reflect the selected track
 				updateActiveTrack()
+				updatePlayerUI(track)
 				break // Exit the loop after setting the default track
 			} catch (error) {
 				console.warn(`Track is invalid: ${track.title} (${songSrc})`)
@@ -416,7 +425,7 @@
 			}
 			trackList.innerHTML = '' // Clear the existing list
 
-			// No array reversal, maintain insertion order
+			// Render tracks in insertion order
 			tracks.forEach((track, index) => {
 				const trackElement = document.createElement('li')
 				trackElement.classList.add('track')
@@ -466,6 +475,7 @@
 				if (newIndex !== -1) {
 					currentTrackIndex = newIndex
 					updateActiveTrack() // Update the UI
+					updatePlayerUI(tracks[newIndex]) // Update the player UI with the current track
 				} else {
 					// If the current track is not found, reset currentTrackIndex
 					currentTrackIndex = null
@@ -475,6 +485,10 @@
 			// If setDefault is true and no track is playing, set the first track as default
 			if (setDefault && currentTrackIndex === null && tracks.length > 0) {
 				await setDefaultTrack()
+				// Automatically play the first track
+				if (currentTrackIndex !== null) {
+					playTrackByIndex(currentTrackIndex)
+				}
 			}
 		} catch (error) {
 			console.error('Error loading tracks:', error)
@@ -488,6 +502,8 @@
 			// Implement your "Add Song" functionality here
 			// For example, open a modal or redirect to an upload page
 			console.log('Add Song button clicked.')
+			// Example: Open a modal (assuming you have a modal implementation)
+			// openAddSongModal();
 		})
 	}
 
@@ -571,4 +587,23 @@
 
 		// Additional event listeners are already set up above
 	})
+
+	// Function to update the player UI with the current track's information
+	function updatePlayerUI(track) {
+		const songTitleElement = document.querySelector('.music-player-song-title')
+		const musicPlayerImg = document.querySelector('.music-player-img')
+
+		if (songTitleElement) {
+			songTitleElement.textContent = track.title
+		}
+
+		if (musicPlayerImg) {
+			let trackImageSrc = './img/default-track-image.png' // Default image
+			if (track.addedBy && track.addedBy.id && track.addedBy.avatar) {
+				trackImageSrc = `https://cdn.discordapp.com/avatars/${track.addedBy.id}/${track.addedBy.avatar}.png`
+			}
+			musicPlayerImg.src = trackImageSrc
+			musicPlayerImg.alt = track.addedBy ? track.addedBy.username : 'Track image'
+		}
+	}
 })()
