@@ -18,7 +18,7 @@
 	function hideAddSongModal() {
 		addSongModal.style.display = 'none' // Hide the modal
 		songUploadForm.reset() // Reset the form fields
-		hideLoadingIndicator() // Ukryj wskaźnik ładowania
+		hideLoadingIndicator() // Hide the loading indicator
 	}
 
 	// Function to show loading indicator
@@ -89,7 +89,7 @@
 				return
 			}
 
-			// Opcjonalnie: Walidacja pól formularza
+			// Optional: Validate form fields
 			const songTitle = songUploadForm.querySelector('input[name="songTitle"]').value.trim()
 			const songFile = songUploadForm.querySelector('input[name="songFile"]').files[0]
 
@@ -103,8 +103,19 @@
 				return
 			}
 
-			// Opcjonalnie: Pokaz wskaźnik ładowania
+			// Optional: Show loading indicator
 			showLoadingIndicator()
+
+			// Log FormData entries for debugging
+			console.log('FormData entries:')
+			for (let pair of formData.entries()) {
+				// For file objects, log their names instead of the object itself
+				if (pair[1] instanceof File) {
+					console.log(`${pair[0]}: ${pair[1].name}`)
+				} else {
+					console.log(`${pair[0]}: ${pair[1]}`)
+				}
+			}
 
 			try {
 				// Send data to the API
@@ -132,7 +143,7 @@
 				console.error('Error submitting form:', error)
 				alert('An error occurred while submitting the form. Please try again.')
 			} finally {
-				hideLoadingIndicator() // Ukryj wskaźnik ładowania niezależnie od wyniku
+				hideLoadingIndicator() // Hide the loading indicator regardless of the outcome
 			}
 		})
 	}

@@ -117,8 +117,7 @@ app.get('/auth/discord/callback', async (req, res) => {
 
 		const user = userResponse.data
 
-		// Store user data in localStorage or session (you may need to adjust based on your frontend setup)
-		// Here, we're redirecting to the frontend with query parameters
+		// Redirect to homepage with user data in query string
 		res.redirect(
 			`/?username=${encodeURIComponent(user.username)}&avatar=${encodeURIComponent(
 				user.avatar
@@ -134,6 +133,18 @@ app.get('/auth/discord/callback', async (req, res) => {
 	}
 })
 
+// Middleware to authenticate user
+function authenticateUser(req, res, next) {
+	const { userId, username, avatar } = req.body
+	console.log('Authenticating user:', { userId, username, avatar }) // Dodane logowanie
+	if (userId && username && avatar) {
+		// Możesz dodać dodatkową weryfikację tutaj
+		next()
+	} else {
+		res.status(401).json({ error: 'Unauthorized' })
+	}
+}
+
 // Route to fetch tracks sorted by creation date ascending
 app.get('/api/tracks', async (req, res) => {
 	try {
@@ -145,19 +156,8 @@ app.get('/api/tracks', async (req, res) => {
 	}
 })
 
-// Middleware to authenticate user
-function authenticateUser(req, res, next) {
-	const { userId, username, avatar } = req.body
-	if (userId && username && avatar) {
-		// Możesz dodać dodatkową weryfikację tutaj
-		next()
-	} else {
-		res.status(401).json({ error: 'Unauthorized' })
-	}
-}
-
 // Route to add a new track
-app.post('/api/tracks', authenticateUser, upload.single('songFile'), async (req, res) => {
+app.post('/api/tracks', upload.single('songFile'), authenticateUser, async (req, res) => {
 	if (!req.file) {
 		return res.status(400).json({ error: 'No file uploaded.' })
 	}

@@ -2,7 +2,8 @@
 
 // Wrap the entire code in an IIFE to prevent global scope pollution
 ;(function () {
-	const backendUrl = 'https://dagankplaylist.onrender.com' // Backend URL
+	// Backend URL - zmień na rzeczywisty URL Twojego backendu
+	const backendUrl = 'https://dagankplaylist.onrender.com'
 	window.backendUrl = backendUrl // Make backendUrl globally accessible
 
 	// Initialize variables
@@ -22,6 +23,11 @@
 	const songProgress = document.querySelector('.song-progress')
 	const volumeControl = document.querySelector('.music-loudness')
 	const addBtn = document.querySelector('.add-btn') // The "Add Song" button
+	const speakerBtn = document.querySelector('.speaker-btn')
+	const trackListElement = document.querySelector('.track-list')
+	const musicPlayerTitle = document.querySelector('.music-player-song-title')
+	const musicPlayerImg = document.querySelector('.music-player-img')
+	const loginBtns = document.querySelector('.login-btns')
 
 	// Function to handle user login and update the UI
 	function handleUserLogin() {
@@ -41,7 +47,6 @@
 
 		// Check if there is user data in localStorage
 		const storedUser = localStorage.getItem('discordUser')
-		const loginBtns = document.querySelector('.login-btns')
 
 		if (storedUser) {
 			const user = JSON.parse(storedUser)
@@ -49,8 +54,8 @@
 			// Replace login buttons with the user's profile picture
 			if (loginBtns) {
 				loginBtns.innerHTML = `
-                    <img class="nav-img" src="https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png" alt="${user.username}">
-                `
+			<img class="nav-img" src="https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png" alt="${user.username}">
+		  `
 			}
 
 			// Show the "Add Song" button
@@ -61,8 +66,8 @@
 			// User is not logged in
 			if (loginBtns) {
 				loginBtns.innerHTML = `
-                    <button class="main-btn log-in-btn">Log in</button>
-                `
+			<button class="main-btn log-in-btn">Log in</button>
+		  `
 				// Add event listener to the login button
 				const loginBtn = loginBtns.querySelector('.log-in-btn')
 				if (loginBtn) {
@@ -88,7 +93,7 @@
 
 	// Function to update the volume icon based on the current volume
 	function updateVolumeIcon() {
-		const speakerIcon = document.querySelector('.speaker-btn i')
+		const speakerIcon = speakerBtn ? speakerBtn.querySelector('i') : null
 		if (!speakerIcon) return
 
 		if (currentVolume === 0 || isMuted) {
@@ -108,9 +113,6 @@
 
 	// Function to toggle mute on/off
 	function toggleMute() {
-		const speakerIcon = document.querySelector('.speaker-btn i')
-		if (!speakerIcon) return
-
 		if (currentAudio) {
 			isMuted = !isMuted
 
@@ -132,7 +134,10 @@
 	// Function to update the duration display
 	function updateDuration() {
 		if (currentAudio && currentAudio.duration) {
-			document.querySelector('.time-total').textContent = formatTime(currentAudio.duration)
+			const totalTimeDisplay = document.querySelector('.time-total')
+			if (totalTimeDisplay) {
+				totalTimeDisplay.textContent = formatTime(currentAudio.duration)
+			}
 		}
 	}
 
@@ -252,11 +257,8 @@
 
 	// Function to update the player UI with the current track's information
 	function updatePlayerUI(track) {
-		const songTitleElement = document.querySelector('.music-player-song-title')
-		const musicPlayerImg = document.querySelector('.music-player-img')
-
-		if (songTitleElement) {
-			songTitleElement.textContent = track.title
+		if (musicPlayerTitle) {
+			musicPlayerTitle.textContent = track.title
 		}
 
 		if (musicPlayerImg) {
@@ -352,22 +354,8 @@
 		}
 	}
 
-	// Function to test if an audio file can be loaded
-	function testAudioFile(url) {
-		return new Promise((resolve, reject) => {
-			const audio = new Audio()
-			audio.src = url
-			audio.addEventListener('canplaythrough', () => {
-				resolve(true)
-			})
-			audio.addEventListener('error', () => {
-				reject(new Error('Audio file cannot be loaded.'))
-			})
-		})
-	}
-
 	// Function to set the first valid track as default in the music player
-	async function setDefaultTrack() {
+	function setDefaultTrack() {
 		// Only set default track if no track is currently playing
 		if (currentTrackIndex !== null) return
 
@@ -379,11 +367,9 @@
 			// Do not call playTrackByIndex
 		} else {
 			console.error('No tracks available to set as default.')
-			const musicPlayerTitle = document.querySelector('.music-player-song-title')
 			if (musicPlayerTitle) {
 				musicPlayerTitle.textContent = 'No tracks available'
 			}
-			const musicPlayerImg = document.querySelector('.music-player-img')
 			if (musicPlayerImg) {
 				musicPlayerImg.src = './img/default-track-image.png' // Set to default image
 			}
@@ -405,12 +391,11 @@
 			}
 			tracks = await response.json() // Assign to global tracks
 
-			const trackList = document.querySelector('.track-list')
-			if (!trackList) {
+			if (!trackListElement) {
 				console.error('Track list element not found in the DOM.')
 				return
 			}
-			trackList.innerHTML = '' // Clear the existing list
+			trackListElement.innerHTML = '' // Clear the existing list
 
 			// Render tracks in insertion order
 			tracks.forEach((track, index) => {
@@ -424,17 +409,15 @@
 				}
 
 				trackElement.innerHTML = `
-                    <div class="track-main-info">
-                        <span class="track-number">${index + 1}</span>
-                        <i class="play-track-icon fa-solid fa-play" data-id="${track._id}"></i>
-                        <img class="track-image" src="${trackImageSrc}" alt="${
-					track.addedBy ? track.addedBy.username : 'Track image'
-				}">
-                        <span class="track-title">${track.title}</span>
-                    </div>
-                    <span class="track-plays">${track.plays}</span>
-                    <span class="track-duration">${track.duration}</span>
-                `
+			<div class="track-main-info">
+			  <span class="track-number">${index + 1}</span>
+			  <i class="play-track-icon fa-solid fa-play" data-id="${track._id}"></i>
+			  <img class="track-image" src="${trackImageSrc}" alt="${track.addedBy ? track.addedBy.username : 'Track image'}">
+			  <span class="track-title">${track.title}</span>
+			</div>
+			<span class="track-plays">${track.plays}</span>
+			<span class="track-duration">${track.duration}</span>
+		  `
 				// Add an event listener to play the track when play icon is clicked
 				const playIcon = trackElement.querySelector('.play-track-icon')
 				if (playIcon) {
@@ -453,7 +436,7 @@
 					playTrackByIndex(index)
 				})
 
-				trackList.appendChild(trackElement)
+				trackListElement.appendChild(trackElement)
 			})
 
 			// After loading tracks, set currentTrackIndex to the saved track ID's index
@@ -471,7 +454,7 @@
 
 			// If setDefault is true and no track is playing, set the first track as default
 			if (setDefault && currentTrackIndex === null && tracks.length > 0) {
-				await setDefaultTrack()
+				setDefaultTrack()
 				// Do not automatically play
 			}
 		} catch (error) {
@@ -486,8 +469,7 @@
 			// Implement your "Add Song" functionality here
 			// For example, open a modal or redirect to an upload page
 			console.log('Add Song button clicked.')
-			// Example: Open a modal (assuming you have a modal implementation)
-			// openAddSongModal();
+			// The addSong.js handles opening the modal
 		})
 	}
 
@@ -522,7 +504,6 @@
 	}
 
 	// Handle mute button click
-	const speakerBtn = document.querySelector('.speaker-btn')
 	if (speakerBtn) {
 		speakerBtn.addEventListener('click', toggleMute)
 	}
@@ -541,10 +522,8 @@
 		topPlayBtn.addEventListener('click', function () {
 			if (currentTrackIndex === null) {
 				if (tracks.length > 0) {
-					// Select the first track, but do not play automatically
-					currentTrackIndex = 0
-					updateActiveTrack()
-					updatePlayerUI(tracks[0])
+					// Select the first track and play
+					playTrackByIndex(0)
 				}
 			} else {
 				togglePlayPause()
@@ -574,101 +553,4 @@
 
 		// Additional event listeners are already set up above
 	})
-
-	// Function to play a selected track by index
-	function playTrackByIndex(index) {
-		if (currentTrackIndex === index && currentAudio) {
-			if (currentAudio.paused) {
-				currentAudio
-					.play()
-					.then(() => {
-						updatePlayPauseButtons(true)
-					})
-					.catch(error => {
-						console.error('Error playing audio:', error)
-					})
-			} else {
-				currentAudio.pause()
-				updatePlayPauseButtons(false)
-			}
-			return
-		}
-
-		// If a track is already playing, stop it
-		if (currentAudio) {
-			currentAudio.pause()
-			currentAudio.currentTime = 0
-			currentAudio.removeEventListener('timeupdate', updateProgressBar)
-			currentAudio.removeEventListener('loadedmetadata', updateDuration)
-			currentAudio.removeEventListener('ended', handleTrackEnd)
-			currentAudio.removeEventListener('error', handleAudioError)
-		}
-
-		currentTrackIndex = index
-		const track = tracks[index]
-		const songSrc = track.file
-		const songTitle = track.title
-
-		// Initialize the new audio player
-		currentAudio = new Audio(songSrc)
-		currentAudio.volume = currentVolume
-		currentAudio.muted = isMuted
-
-		// Reset progress bar and current time display
-		if (songProgress) {
-			songProgress.value = 0
-		}
-		const currentTimeDisplay = document.querySelector('.time-current')
-		const totalTimeDisplay = document.querySelector('.time-total')
-		if (currentTimeDisplay) currentTimeDisplay.textContent = '0:00'
-		if (totalTimeDisplay) totalTimeDisplay.textContent = '0:00'
-
-		// Update the UI for the music player
-		updatePlayerUI(track)
-
-		// Update active track in the track list
-		updateActiveTrack()
-
-		// Add event listeners for the audio player
-		currentAudio.addEventListener('loadedmetadata', updateDuration)
-		currentAudio.addEventListener('timeupdate', updateProgressBar)
-		currentAudio.addEventListener('ended', handleTrackEnd)
-		currentAudio.addEventListener('error', handleAudioError)
-
-		// Play the track with enhanced error handling
-		currentAudio
-			.play()
-			.then(() => {
-				updatePlayPauseButtons(true)
-			})
-			.catch(error => {
-				console.error('Error playing audio:', error)
-				alert(`Cannot play the track "${songTitle}". It might be missing or corrupted.`)
-				playNextTrack()
-			})
-	}
-
-	// Function to set the first valid track as default in the music player
-	async function setDefaultTrack() {
-		// Only set default track if no track is currently playing
-		if (currentTrackIndex !== null) return
-
-		if (tracks.length > 0) {
-			// Set the first track as selected but do not play
-			currentTrackIndex = 0
-			updateActiveTrack()
-			updatePlayerUI(tracks[0])
-			// Do not call playTrackByIndex
-		} else {
-			console.error('No tracks available to set as default.')
-			const musicPlayerTitle = document.querySelector('.music-player-song-title')
-			if (musicPlayerTitle) {
-				musicPlayerTitle.textContent = 'No tracks available'
-			}
-			const musicPlayerImg = document.querySelector('.music-player-img')
-			if (musicPlayerImg) {
-				musicPlayerImg.src = './img/default-track-image.png' // Set to default image
-			}
-		}
-	}
 })()
