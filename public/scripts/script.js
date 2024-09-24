@@ -362,23 +362,17 @@
 		// Only set default track if no track is currently playing
 		if (currentTrackIndex !== null) return
 
-		// Reverse the tracks array to have the newest tracks first
-		const reversedTracks = [...tracks].reverse()
-
-		for (let i = 0; i < reversedTracks.length; i++) {
-			const track = reversedTracks[i]
+		for (let i = 0; i < tracks.length; i++) {
+			const track = tracks[i]
 			const songSrc = track.file
 
 			try {
 				// Attempt to load the audio file
 				await testAudioFile(songSrc)
 				// If successful, set it as the default track without autoplaying
-				const originalIndex = tracks.findIndex(t => t._id === track._id || t.id === track.id) // Adjust if different unique identifier
-				if (originalIndex !== -1) {
-					currentTrackIndex = originalIndex
-					// Update the UI to reflect the selected track
-					updateActiveTrack()
-				}
+				currentTrackIndex = i
+				// Update the UI to reflect the selected track
+				updateActiveTrack()
 				break // Exit the loop after setting the default track
 			} catch (error) {
 				console.warn(`Track is invalid: ${track.title} (${songSrc})`)
@@ -416,11 +410,8 @@
 			}
 			trackList.innerHTML = '' // Clear the existing list
 
-			// Reverse the tracks array to display newest first
-			const reversedTracks = [...tracks].reverse()
-
-			// Populate the track list with tracks from the response
-			reversedTracks.forEach((track, index) => {
+			// No longer reversing the tracks array; display in insertion order
+			tracks.forEach((track, index) => {
 				// Determine the original index in the tracks array
 				const originalIndex = tracks.findIndex(t => t._id === track._id || t.id === track.id) // Adjust if different unique identifier
 

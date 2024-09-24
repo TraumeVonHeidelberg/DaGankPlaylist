@@ -150,10 +150,10 @@ app.get('/auth/discord/callback', async (req, res) => {
 	}
 })
 
-// Route to fetch tracks
+// Route to fetch tracks sorted by creation date ascending
 app.get('/api/tracks', async (req, res) => {
 	try {
-		const tracks = await Track.find() // Fetch all tracks from the database
+		const tracks = await Track.find().sort({ createdAt: 1 }) // Sort by creation date ascending
 		res.json(tracks)
 	} catch (error) {
 		console.error('Error fetching tracks:', error)
