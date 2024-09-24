@@ -76,7 +76,12 @@
 					const newTrack = await response.json()
 					console.log('Track added:', newTrack)
 					hideAddSongModal() // Hide the modal after adding the track
-					window.loadTracks() // Call the loadTracks() function from script.js
+					if (typeof window.loadTracks === 'function') {
+						window.loadTracks(false) // Reload the tracks without setting a new default
+					} else {
+						console.error('window.loadTracks is not a function')
+						alert('Track added, but failed to refresh the track list automatically. Please refresh the page manually.')
+					}
 				} else {
 					console.error('Error adding track.')
 					alert('An error occurred while adding the track. Please try again.')

@@ -372,10 +372,12 @@
 			try {
 				// Attempt to load the audio file
 				await testAudioFile(songSrc)
-				// If successful, set it as the default track
+				// If successful, set it as the default track without autoplaying
 				const originalIndex = tracks.findIndex(t => t._id === track._id || t.id === track.id) // Adjust if different unique identifier
 				if (originalIndex !== -1) {
-					playTrackByIndex(originalIndex)
+					currentTrackIndex = originalIndex
+					// Update the UI to reflect the selected track
+					updateActiveTrack()
 				}
 				break // Exit the loop after setting the default track
 			} catch (error) {
@@ -399,7 +401,7 @@
 	}
 
 	// Function to populate the track list and set the first valid track as default
-	async function loadTracks() {
+	async function loadTracks(setDefault = false) {
 		try {
 			const response = await fetch(`${backendUrl}/api/tracks`)
 			if (!response.ok) {
@@ -460,8 +462,8 @@
 				trackList.appendChild(trackElement)
 			})
 
-			// Set the first valid track as default in the music player only if no track is playing
-			if (tracks.length > 0) {
+			// Set the first valid track as default in the music player only if requested
+			if (setDefault && tracks.length > 0) {
 				await setDefaultTrack()
 			}
 
@@ -551,10 +553,13 @@
 		prevBtn.addEventListener('click', playPreviousTrack)
 	}
 
+	// Expose loadTracks to the global window object
+	window.loadTracks = loadTracks
+
 	// Handle user login and load tracks on page load
 	window.addEventListener('DOMContentLoaded', () => {
 		handleUserLogin()
-		loadTracks() // Load the tracks after the page is fully loaded
+		loadTracks(true) // Load the tracks and set the default track on initial page load
 
 		// Additional event listeners are already set up above
 	})
