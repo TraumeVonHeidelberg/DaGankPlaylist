@@ -184,6 +184,7 @@
 				updatePlayPauseButtons(false)
 			}
 		} else if (tracks.length > 0) {
+			// If no track is currently loaded, play the first track
 			playTrackByIndex(0)
 		}
 	}
@@ -370,28 +371,14 @@
 		// Only set default track if no track is currently playing
 		if (currentTrackIndex !== null) return
 
-		for (let i = 0; i < tracks.length; i++) {
-			const track = tracks[i]
-			const songSrc = track.file
-
-			try {
-				// Attempt to load the audio file
-				await testAudioFile(songSrc)
-				// If successful, set it as the default track without autoplaying
-				currentTrackIndex = i
-				// Update the UI to reflect the selected track
-				updateActiveTrack()
-				updatePlayerUI(track)
-				break // Exit the loop after setting the default track
-			} catch (error) {
-				console.warn(`Track is invalid: ${track.title} (${songSrc})`)
-				// Continue to the next track
-			}
-		}
-
-		if (currentTrackIndex === null) {
-			console.error('No valid tracks available.')
-			// Optionally, display a message to the user
+		if (tracks.length > 0) {
+			// Set the first track as selected but do not play
+			currentTrackIndex = 0
+			updateActiveTrack()
+			updatePlayerUI(tracks[0])
+			// Do not call playTrackByIndex
+		} else {
+			console.error('No tracks available to set as default.')
 			const musicPlayerTitle = document.querySelector('.music-player-song-title')
 			if (musicPlayerTitle) {
 				musicPlayerTitle.textContent = 'No tracks available'
@@ -485,10 +472,7 @@
 			// If setDefault is true and no track is playing, set the first track as default
 			if (setDefault && currentTrackIndex === null && tracks.length > 0) {
 				await setDefaultTrack()
-				// Automatically play the first track
-				if (currentTrackIndex !== null) {
-					playTrackByIndex(currentTrackIndex)
-				}
+				// Do not automatically play
 			}
 		} catch (error) {
 			console.error('Error loading tracks:', error)
@@ -557,7 +541,10 @@
 		topPlayBtn.addEventListener('click', function () {
 			if (currentTrackIndex === null) {
 				if (tracks.length > 0) {
-					playTrackByIndex(0)
+					// Select the first track, but do not play automatically
+					currentTrackIndex = 0
+					updateActiveTrack()
+					updatePlayerUI(tracks[0])
 				}
 			} else {
 				togglePlayPause()
@@ -588,22 +575,100 @@
 		// Additional event listeners are already set up above
 	})
 
-	// Function to update the player UI with the current track's information
-	function updatePlayerUI(track) {
-		const songTitleElement = document.querySelector('.music-player-song-title')
-		const musicPlayerImg = document.querySelector('.music-player-img')
-
-		if (songTitleElement) {
-			songTitleElement.textContent = track.title
+	// Function to play a selected track by index
+	function playTrackByIndex(index) {
+		if (currentTrackIndex === index && currentAudio) {
+			if (currentAudio.paused) {
+				currentAudio
+					.play()
+					.then(() => {
+						updatePlayPauseButtons(true)
+					})
+					.catch(error => {
+						console.error('Error playing audio:', error)
+					})
+			} else {
+				currentAudio.pause()
+				updatePlayPauseButtons(false)
+			}
+			return
 		}
 
-		if (musicPlayerImg) {
-			let trackImageSrc = './img/default-track-image.png' // Default image
-			if (track.addedBy && track.addedBy.id && track.addedBy.avatar) {
-				trackImageSrc = `https://cdn.discordapp.com/avatars/${track.addedBy.id}/${track.addedBy.avatar}.png`
+		// If a track is already playing, stop it
+		if (currentAudio) {
+			currentAudio.pause()
+			currentAudio.currentTime = 0
+			currentAudio.removeEventListener('timeupdate', updateProgressBar)
+			currentAudio.removeEventListener('loadedmetadata', updateDuration)
+			currentAudio.removeEventListener('ended', handleTrackEnd)
+			currentAudio.removeEventListener('error', handleAudioError)
+		}
+
+		currentTrackIndex = index
+		const track = tracks[index]
+		const songSrc = track.file
+		const songTitle = track.title
+
+		// Initialize the new audio player
+		currentAudio = new Audio(songSrc)
+		currentAudio.volume = currentVolume
+		currentAudio.muted = isMuted
+
+		// Reset progress bar and current time display
+		if (songProgress) {
+			songProgress.value = 0
+		}
+		const currentTimeDisplay = document.querySelector('.time-current')
+		const totalTimeDisplay = document.querySelector('.time-total')
+		if (currentTimeDisplay) currentTimeDisplay.textContent = '0:00'
+		if (totalTimeDisplay) totalTimeDisplay.textContent = '0:00'
+
+		// Update the UI for the music player
+		updatePlayerUI(track)
+
+		// Update active track in the track list
+		updateActiveTrack()
+
+		// Add event listeners for the audio player
+		currentAudio.addEventListener('loadedmetadata', updateDuration)
+		currentAudio.addEventListener('timeupdate', updateProgressBar)
+		currentAudio.addEventListener('ended', handleTrackEnd)
+		currentAudio.addEventListener('error', handleAudioError)
+
+		// Play the track with enhanced error handling
+		currentAudio
+			.play()
+			.then(() => {
+				updatePlayPauseButtons(true)
+			})
+			.catch(error => {
+				console.error('Error playing audio:', error)
+				alert(`Cannot play the track "${songTitle}". It might be missing or corrupted.`)
+				playNextTrack()
+			})
+	}
+
+	// Function to set the first valid track as default in the music player
+	async function setDefaultTrack() {
+		// Only set default track if no track is currently playing
+		if (currentTrackIndex !== null) return
+
+		if (tracks.length > 0) {
+			// Set the first track as selected but do not play
+			currentTrackIndex = 0
+			updateActiveTrack()
+			updatePlayerUI(tracks[0])
+			// Do not call playTrackByIndex
+		} else {
+			console.error('No tracks available to set as default.')
+			const musicPlayerTitle = document.querySelector('.music-player-song-title')
+			if (musicPlayerTitle) {
+				musicPlayerTitle.textContent = 'No tracks available'
 			}
-			musicPlayerImg.src = trackImageSrc
-			musicPlayerImg.alt = track.addedBy ? track.addedBy.username : 'Track image'
+			const musicPlayerImg = document.querySelector('.music-player-img')
+			if (musicPlayerImg) {
+				musicPlayerImg.src = './img/default-track-image.png' // Set to default image
+			}
 		}
 	}
 })()
