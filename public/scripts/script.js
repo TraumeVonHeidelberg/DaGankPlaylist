@@ -397,6 +397,12 @@
 	// Function to populate the track list and set the first valid track as default
 	async function loadTracks(setDefault = false) {
 		try {
+			// Save current track ID if a track is playing
+			let currentTrackId = null
+			if (currentTrackIndex !== null && tracks[currentTrackIndex]) {
+				currentTrackId = tracks[currentTrackIndex]._id
+			}
+
 			const response = await fetch(`${backendUrl}/api/tracks`)
 			if (!response.ok) {
 				throw new Error('Failed to load tracks')
@@ -410,11 +416,8 @@
 			}
 			trackList.innerHTML = '' // Clear the existing list
 
-			// No longer reversing the tracks array; display in insertion order
+			// No array reversal, maintain insertion order
 			tracks.forEach((track, index) => {
-				// Determine the original index in the tracks array
-				const originalIndex = tracks.findIndex(t => t._id === track._id || t.id === track.id) // Adjust if different unique identifier
-
 				const trackElement = document.createElement('li')
 				trackElement.classList.add('track')
 
@@ -427,7 +430,7 @@
 				trackElement.innerHTML = `
                     <div class="track-main-info">
                         <span class="track-number">${index + 1}</span>
-                        <i class="play-track-icon fa-solid fa-play" data-src="${track.file}"></i>
+                        <i class="play-track-icon fa-solid fa-play" data-id="${track._id}"></i>
                         <img class="track-image" src="${trackImageSrc}" alt="${
 					track.addedBy ? track.addedBy.username : 'Track image'
 				}">
@@ -436,29 +439,43 @@
                     <span class="track-plays">${track.plays}</span>
                     <span class="track-duration">${track.duration}</span>
                 `
-				// Add an event listener to play the track when clicked
+				// Add an event listener to play the track when play icon is clicked
 				const playIcon = trackElement.querySelector('.play-track-icon')
 				if (playIcon) {
 					playIcon.addEventListener('click', event => {
 						event.stopPropagation() // Prevent the click from bubbling up to the li
-						playTrackByIndex(originalIndex)
+						const trackId = event.target.getAttribute('data-id')
+						const index = tracks.findIndex(t => t._id === trackId)
+						if (index !== -1) {
+							playTrackByIndex(index)
+						}
 					})
 				}
 
 				// Add an event listener to the entire li to play the track
 				trackElement.addEventListener('click', () => {
-					playTrackByIndex(originalIndex)
+					playTrackByIndex(index)
 				})
 
 				trackList.appendChild(trackElement)
 			})
 
-			// Set the first valid track as default in the music player only if requested
-			if (setDefault && tracks.length > 0) {
-				await setDefaultTrack()
+			// After loading tracks, set currentTrackIndex to the saved track ID's index
+			if (!setDefault && currentTrackId) {
+				const newIndex = tracks.findIndex(track => track._id === currentTrackId)
+				if (newIndex !== -1) {
+					currentTrackIndex = newIndex
+					updateActiveTrack() // Update the UI
+				} else {
+					// If the current track is not found, reset currentTrackIndex
+					currentTrackIndex = null
+				}
 			}
 
-			updateActiveTrack() // Update the UI to reflect the currently active track
+			// If setDefault is true and no track is playing, set the first track as default
+			if (setDefault && currentTrackIndex === null && tracks.length > 0) {
+				await setDefaultTrack()
+			}
 		} catch (error) {
 			console.error('Error loading tracks:', error)
 			alert('Failed to load tracks. Please try again later.')

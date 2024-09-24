@@ -67,7 +67,8 @@
 
 			try {
 				// Send data to the API
-				const response = await fetch('https://dagankplaylist.onrender.com/api/tracks', {
+				const response = await fetch(`${backendUrl}/api/tracks`, {
+					// Ensure backendUrl is accessible here
 					method: 'POST',
 					body: formData,
 				})
@@ -83,8 +84,9 @@
 						alert('Track added, but failed to refresh the track list automatically. Please refresh the page manually.')
 					}
 				} else {
-					console.error('Error adding track.')
-					alert('An error occurred while adding the track. Please try again.')
+					console.error('Error adding track:', response.statusText)
+					const errorData = await response.json()
+					alert(`An error occurred while adding the track: ${errorData.error || response.statusText}`)
 				}
 			} catch (error) {
 				console.error('Error submitting form:', error)
