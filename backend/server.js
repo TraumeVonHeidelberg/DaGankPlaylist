@@ -9,20 +9,43 @@ const multer = require('multer') // Import Multer
 const path = require('path') // For working with file paths
 const ffmpeg = require('fluent-ffmpeg') // Import ffmpeg
 const Track = require('./models/Track') // Import Track model
+const { CloudinaryStorage } = require('multer-storage-cloudinary') // Import Cloudinary Storage
+const cloudinary = require('cloudinary').v2 // Import Cloudinary
 const app = express()
-const fs = require('fs')
 const port = process.env.PORT || 3000
 
-// Define upload directory
-const uploadDir = path.join(__dirname, 'uploads')
-const redirectUri = process.env.DISCORD_REDIRECT_URI
+// Cloudinary Configuration
+cloudinary.config({
+	cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+	api_key: process.env.CLOUDINARY_API_KEY,
+	api_secret: process.env.CLOUDINARY_API_SECRET,
+})
 
-// Ensure upload directory exists
-if (!fs.existsSync(uploadDir)) {
-	fs.mkdirSync(uploadDir, { recursive: true })
-}
+// Multer configuration for Cloudinary storage
+const storage = new CloudinaryStorage({
+	cloudinary: cloudinary,
+	params: {
+		folder: 'music_tracks', // Folder in Cloudinary
+		allowed_formats: ['mp3', 'wav', 'ogg', 'flac'], // Allowed audio formats
+		public_id: (req, file) => `${Date.now()}-${path.parse(file.originalname).name}`, // Unique filename
+	},
+})
 
-// 1. Connect to MongoDB
+// Multer upload instance
+const upload = multer({
+	storage: storage,
+	limits: { fileSize: 100 * 1024 * 1024 }, // 100 MB limit
+	fileFilter: (req, file, cb) => {
+		const allowedTypes = ['audio/mpeg', 'audio/wav', 'audio/mp3', 'audio/ogg', 'audio/flac']
+		if (allowedTypes.includes(file.mimetype)) {
+			cb(null, true)
+		} else {
+			cb(new Error('Only audio files are allowed!'), false)
+		}
+	},
+})
+
+// Connect to MongoDB
 mongoose
 	.connect(process.env.MONGODB_URI, {
 		useNewUrlParser: true,
@@ -42,9 +65,6 @@ app.use(express.urlencoded({ extended: true }))
 // Serve static files from 'public' directory
 app.use(express.static(path.join(__dirname, '../public')))
 
-// Serve static files from 'uploads' directory
-app.use('/uploads', express.static(uploadDir))
-
 // Use CORS
 app.use(
 	cors({
@@ -53,34 +73,6 @@ app.use(
 		allowedHeaders: ['Content-Type', 'Authorization'],
 	})
 )
-
-// Multer configuration for file uploads
-const storage = multer.diskStorage({
-	destination: (req, file, cb) => {
-		cb(null, uploadDir) // Path to the directory where files will be stored
-	},
-	filename: (req, file, cb) => {
-		// Generate unique filename: timestamp + original extension
-		const uniqueSuffix = Date.now() + path.extname(file.originalname)
-		cb(null, uniqueSuffix)
-	},
-})
-
-// File filter to accept only audio files
-function fileFilter(req, file, cb) {
-	const allowedTypes = ['audio/mpeg', 'audio/wav', 'audio/mp3', 'audio/ogg', 'audio/flac']
-	if (allowedTypes.includes(file.mimetype)) {
-		cb(null, true)
-	} else {
-		cb(new Error('Only audio files are allowed!'), false)
-	}
-}
-
-const upload = multer({
-	storage: storage,
-	fileFilter: fileFilter,
-	limits: { fileSize: 100 * 1024 * 1024 }, // 100 MB limit
-})
 
 // Home page — now loads index.html from 'public' folder
 app.get('/', (req, res) => {
@@ -162,68 +154,80 @@ app.get('/api/tracks', async (req, res) => {
 })
 
 // Route to add a new track
-app.post('/api/tracks', upload.single('songFile'), (req, res) => {
+app.post('/api/tracks', upload.single('songFile'), async (req, res) => {
 	if (!req.file) {
 		return res.status(400).json({ error: 'No file uploaded.' })
 	}
 
-	const filePath = path.join(uploadDir, req.file.filename) // Path to the file
+	const fileUrl = req.file.path // Cloudinary URL
+	const filePublicId = req.file.filename // Cloudinary public ID
 
-	// Get track duration using ffmpeg
-	ffmpeg.ffprobe(filePath, async (err, metadata) => {
-		if (err) {
-			console.error('Error analyzing audio file:', err)
-			// Delete the uploaded file if ffprobe fails
-			fs.unlink(filePath, unlinkErr => {
-				if (unlinkErr) console.error('Error deleting file after ffprobe failure:', unlinkErr)
-			})
-			return res.status(500).json({ error: 'Failed to determine track duration.' })
+	// To get the duration, we need to download the file temporarily or use another approach
+	// Cloudinary does not provide audio duration metadata out of the box
+	// A workaround is to fetch the file and analyze it with ffmpeg
+	// Alternatively, you can use a third-party service or library that can fetch duration from URL
+
+	// For simplicity, let's fetch the file and get the duration
+	try {
+		// Fetch the audio file as a buffer
+		const response = await axios.get(fileUrl, { responseType: 'arraybuffer' })
+		const buffer = Buffer.from(response.data, 'binary')
+
+		// Save buffer to a temporary file
+		const tempFilePath = path.join(__dirname, 'temp', `${filePublicId}${path.extname(req.file.originalname)}`)
+
+		// Ensure the temporary directory exists
+		const tempDir = path.join(__dirname, 'temp')
+		if (!fs.existsSync(tempDir)) {
+			fs.mkdirSync(tempDir, { recursive: true })
 		}
 
-		// Calculate track duration in MM:SS format
-		const durationInSeconds = Math.floor(metadata.format.duration)
+		// Write buffer to temp file
+		fs.writeFileSync(tempFilePath, buffer)
+
+		// Get duration using ffmpeg
+		const durationInSeconds = await new Promise((resolve, reject) => {
+			ffmpeg.ffprobe(tempFilePath, (err, metadata) => {
+				if (err) {
+					reject(err)
+				} else {
+					resolve(Math.floor(metadata.format.duration))
+				}
+			})
+		})
+
+		// Calculate MM:SS format
 		const minutes = Math.floor(durationInSeconds / 60)
 		const seconds = durationInSeconds % 60
 		const formattedDuration = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`
 
-		// Create a full URL for the file
-		const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`
+		// Delete the temporary file
+		fs.unlinkSync(tempFilePath)
 
-		// Validate that songTitle is provided
+		// Create a new track record
 		const songTitle = req.body.songTitle
 		if (!songTitle || songTitle.trim() === '') {
-			// Delete the uploaded file if title is missing
-			fs.unlink(filePath, unlinkErr => {
-				if (unlinkErr) console.error('Error deleting file after missing title:', unlinkErr)
-			})
 			return res.status(400).json({ error: 'Song title is required.' })
 		}
 
-		// Create a new track record
-		try {
-			const newTrack = new Track({
-				title: songTitle,
-				file: fileUrl, // Full URL to the file
-				duration: formattedDuration, // Calculated duration
-				plays: 0, // Initialize plays to 0
-				addedBy: {
-					id: req.body.userId,
-					username: req.body.username,
-					avatar: req.body.avatar,
-				},
-			})
+		const newTrack = new Track({
+			title: songTitle,
+			file: fileUrl, // Cloudinary URL
+			duration: formattedDuration, // Calculated duration
+			plays: 0, // Initialize plays to 0
+			addedBy: {
+				id: req.body.userId,
+				username: req.body.username,
+				avatar: req.body.avatar,
+			},
+		})
 
-			await newTrack.save() // Save the new track to MongoDB
-			res.status(201).json(newTrack) // Return the newly added track
-		} catch (error) {
-			console.error('Error saving track to database:', error)
-			// Delete the uploaded file if database save fails
-			fs.unlink(filePath, unlinkErr => {
-				if (unlinkErr) console.error('Error deleting file after database save failure:', unlinkErr)
-			})
-			res.status(500).json({ error: 'Failed to add track.' })
-		}
-	})
+		await newTrack.save() // Save the new track to MongoDB
+		res.status(201).json(newTrack) // Return the newly added track
+	} catch (error) {
+		console.error('Error processing track:', error)
+		res.status(500).json({ error: 'Failed to process track.' })
+	}
 })
 
 // Error route

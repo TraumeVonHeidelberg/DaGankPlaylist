@@ -6,6 +6,8 @@
 	const addBtn = document.querySelector('.add-btn')
 	const addSongModal = document.getElementById('addSongModal')
 	const songUploadForm = document.getElementById('song-upload-form')
+	const closeModalBtn = document.querySelector('.close-modal') // Przycisk zamykający modal (jeśli istnieje)
+	const uploadButton = document.querySelector('#upload-button') // Przycisk upload (jeśli istnieje)
 
 	// Function to display the modal
 	function showAddSongModal() {
@@ -16,6 +18,23 @@
 	function hideAddSongModal() {
 		addSongModal.style.display = 'none' // Hide the modal
 		songUploadForm.reset() // Reset the form fields
+		hideLoadingIndicator() // Ukryj wskaźnik ładowania
+	}
+
+	// Function to show loading indicator
+	function showLoadingIndicator() {
+		const loadingElement = document.querySelector('.loading-indicator')
+		if (loadingElement) {
+			loadingElement.style.display = 'block'
+		}
+	}
+
+	// Function to hide loading indicator
+	function hideLoadingIndicator() {
+		const loadingElement = document.querySelector('.loading-indicator')
+		if (loadingElement) {
+			loadingElement.style.display = 'none'
+		}
 	}
 
 	// Check if the user is logged in
@@ -33,6 +52,11 @@
 				alert('Please log in to add a song.')
 			}
 		})
+	}
+
+	// Event handler for the 'close modal' button (if exists)
+	if (closeModalBtn) {
+		closeModalBtn.addEventListener('click', hideAddSongModal)
 	}
 
 	// Close the modal when clicking outside of it
@@ -65,10 +89,26 @@
 				return
 			}
 
+			// Opcjonalnie: Walidacja pól formularza
+			const songTitle = songUploadForm.querySelector('input[name="songTitle"]').value.trim()
+			const songFile = songUploadForm.querySelector('input[name="songFile"]').files[0]
+
+			if (!songTitle) {
+				alert('Please enter a song title.')
+				return
+			}
+
+			if (!songFile) {
+				alert('Please select a song file to upload.')
+				return
+			}
+
+			// Opcjonalnie: Pokaz wskaźnik ładowania
+			showLoadingIndicator()
+
 			try {
 				// Send data to the API
 				const response = await fetch(`${window.backendUrl}/api/tracks`, {
-					// Użycie window.backendUrl
 					method: 'POST',
 					body: formData,
 				})
@@ -91,6 +131,8 @@
 			} catch (error) {
 				console.error('Error submitting form:', error)
 				alert('An error occurred while submitting the form. Please try again.')
+			} finally {
+				hideLoadingIndicator() // Ukryj wskaźnik ładowania niezależnie od wyniku
 			}
 		})
 	}
