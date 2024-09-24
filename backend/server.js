@@ -12,6 +12,7 @@ const fs = require('fs')
 const port = process.env.PORT || 3000
 
 const uploadDir = path.join(__dirname, 'uploads')
+const redirectUri = process.env.DISCORD_REDIRECT_URI
 
 // Check if the directory exists, if not, create it
 if (!fs.existsSync(uploadDir)) {
@@ -61,8 +62,11 @@ app.get('/', (req, res) => {
 // Route for Discord authentication
 app.get('/auth/discord', (req, res) => {
 	const clientId = process.env.DISCORD_CLIENT_ID
-	const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI)
-	const oauth2Url = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=identify%20email`
+	const redirectUri = process.env.DISCORD_REDIRECT_URI
+	const scope = 'identify email'
+	const oauth2Url = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
+		redirectUri
+	)}&response_type=code&scope=${encodeURIComponent(scope)}`
 
 	res.redirect(oauth2Url) // Redirect to Discord OAuth
 })
@@ -72,7 +76,9 @@ app.get('/auth/discord/callback', async (req, res) => {
 	const code = req.query.code
 	const clientId = process.env.DISCORD_CLIENT_ID
 	const clientSecret = process.env.DISCORD_CLIENT_SECRET
-	const redirectUri = process.env.DISCORD_REDIRECT_URI
+	const redirectUri = process.env.DISCORD_REDIRECT_URI // Ensure this matches exactly
+
+	console.log('Redirect URI:', redirectUri) // Optional: For debugging purposes
 
 	try {
 		// Exchange code for token
@@ -81,9 +87,9 @@ app.get('/auth/discord/callback', async (req, res) => {
 		params.append('client_secret', clientSecret)
 		params.append('grant_type', 'authorization_code')
 		params.append('code', code)
-		params.append('redirect_uri', redirectUri)
+		params.append('redirect_uri', redirectUri) // Must match exactly with the one used in /auth/discord
 
-		const tokenResponse = await axios.post('https://discord.com/api/oauth2/token', params, {
+		const tokenResponse = await axios.post('https://discord.com/api/oauth2/token', params.toString(), {
 			headers: {
 				'Content-Type': 'application/x-www-form-urlencoded',
 			},
@@ -101,9 +107,17 @@ app.get('/auth/discord/callback', async (req, res) => {
 		const user = userResponse.data
 
 		// Redirect to homepage with user data in query string
-		res.redirect(`/index.html?username=${user.username}&avatar=${user.avatar}&id=${user.id}`)
+		res.redirect(
+			`/index.html?username=${encodeURIComponent(user.username)}&avatar=${encodeURIComponent(
+				user.avatar
+			)}&id=${encodeURIComponent(user.id)}`
+		)
 	} catch (error) {
-		console.error('OAuth error:', error)
+		if (error.response) {
+			console.error('OAuth error:', error.response.data)
+		} else {
+			console.error('OAuth error:', error.message)
+		}
 		res.redirect('/error')
 	}
 })
