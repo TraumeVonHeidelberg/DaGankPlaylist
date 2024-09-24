@@ -1,3 +1,5 @@
+// server.js
+
 require('dotenv').config() // Load environment variables
 const express = require('express')
 const cors = require('cors') // Import CORS
@@ -11,17 +13,21 @@ const app = express()
 const fs = require('fs')
 const port = process.env.PORT || 3000
 
+// Define upload directory
 const uploadDir = path.join(__dirname, 'uploads')
 const redirectUri = process.env.DISCORD_REDIRECT_URI
 
-// Check if the directory exists, if not, create it
+// Ensure upload directory exists
 if (!fs.existsSync(uploadDir)) {
 	fs.mkdirSync(uploadDir, { recursive: true })
 }
 
 // 1. Connect to MongoDB
 mongoose
-	.connect(process.env.MONGODB_URI)
+	.connect(process.env.MONGODB_URI, {
+		useNewUrlParser: true,
+		useUnifiedTopology: true,
+	})
 	.then(() => {
 		console.log('Connected to MongoDB')
 	})
@@ -29,30 +35,52 @@ mongoose
 		console.error('MongoDB connection error:', err)
 	})
 
+// Middleware to parse JSON and urlencoded data
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
+
 // Serve static files from 'public' directory
 app.use(express.static(path.join(__dirname, '../public')))
 
 // Serve static files from 'uploads' directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
+app.use('/uploads', express.static(uploadDir))
 
 // Use CORS
 app.use(
 	cors({
 		origin: ['https://dagankplaylist.netlify.app', 'http://localhost:3000'], // Replace with your frontend URLs
+		methods: ['GET', 'POST'],
+		allowedHeaders: ['Content-Type', 'Authorization'],
 	})
 )
 
 // Multer configuration for file uploads
 const storage = multer.diskStorage({
 	destination: (req, file, cb) => {
-		cb(null, 'uploads/') // Path to the directory where files will be stored
+		cb(null, uploadDir) // Path to the directory where files will be stored
 	},
 	filename: (req, file, cb) => {
-		cb(null, Date.now() + path.extname(file.originalname)) // Unique filename with timestamp
+		// Generate unique filename: timestamp + original extension
+		const uniqueSuffix = Date.now() + path.extname(file.originalname)
+		cb(null, uniqueSuffix)
 	},
 })
 
-const upload = multer({ storage: storage }) // Initialize multer with the above configuration
+// File filter to accept only audio files
+function fileFilter(req, file, cb) {
+	const allowedTypes = ['audio/mpeg', 'audio/wav', 'audio/mp3', 'audio/ogg', 'audio/flac']
+	if (allowedTypes.includes(file.mimetype)) {
+		cb(null, true)
+	} else {
+		cb(new Error('Only audio files are allowed!'), false)
+	}
+}
+
+const upload = multer({
+	storage: storage,
+	fileFilter: fileFilter,
+	limits: { fileSize: 100 * 1024 * 1024 }, // 100 MB limit
+})
 
 // Home page — now loads index.html from 'public' folder
 app.get('/', (req, res) => {
@@ -108,7 +136,7 @@ app.get('/auth/discord/callback', async (req, res) => {
 
 		// Redirect to homepage with user data in query string
 		res.redirect(
-			`/index.html?username=${encodeURIComponent(user.username)}&avatar=${encodeURIComponent(
+			`/?username=${encodeURIComponent(user.username)}&avatar=${encodeURIComponent(
 				user.avatar
 			)}&id=${encodeURIComponent(user.id)}`
 		)
@@ -128,18 +156,27 @@ app.get('/api/tracks', async (req, res) => {
 		const tracks = await Track.find() // Fetch all tracks from the database
 		res.json(tracks)
 	} catch (error) {
+		console.error('Error fetching tracks:', error)
 		res.status(500).json({ error: 'Failed to fetch tracks.' })
 	}
 })
 
 // Route to add a new track
 app.post('/api/tracks', upload.single('songFile'), (req, res) => {
-	const filePath = path.join(__dirname, 'uploads', req.file.filename) // Path to the file
+	if (!req.file) {
+		return res.status(400).json({ error: 'No file uploaded.' })
+	}
+
+	const filePath = path.join(uploadDir, req.file.filename) // Path to the file
 
 	// Get track duration using ffmpeg
 	ffmpeg.ffprobe(filePath, async (err, metadata) => {
 		if (err) {
 			console.error('Error analyzing audio file:', err)
+			// Delete the uploaded file if ffprobe fails
+			fs.unlink(filePath, unlinkErr => {
+				if (unlinkErr) console.error('Error deleting file after ffprobe failure:', unlinkErr)
+			})
 			return res.status(500).json({ error: 'Failed to determine track duration.' })
 		}
 
@@ -152,12 +189,23 @@ app.post('/api/tracks', upload.single('songFile'), (req, res) => {
 		// Create a full URL for the file
 		const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`
 
+		// Validate that songTitle is provided
+		const songTitle = req.body.songTitle
+		if (!songTitle || songTitle.trim() === '') {
+			// Delete the uploaded file if title is missing
+			fs.unlink(filePath, unlinkErr => {
+				if (unlinkErr) console.error('Error deleting file after missing title:', unlinkErr)
+			})
+			return res.status(400).json({ error: 'Song title is required.' })
+		}
+
 		// Create a new track record
 		try {
 			const newTrack = new Track({
-				title: req.body.songTitle,
+				title: songTitle,
 				file: fileUrl, // Full URL to the file
 				duration: formattedDuration, // Calculated duration
+				plays: 0, // Initialize plays to 0
 				addedBy: {
 					id: req.body.userId,
 					username: req.body.username,
@@ -169,9 +217,18 @@ app.post('/api/tracks', upload.single('songFile'), (req, res) => {
 			res.status(201).json(newTrack) // Return the newly added track
 		} catch (error) {
 			console.error('Error saving track to database:', error)
+			// Delete the uploaded file if database save fails
+			fs.unlink(filePath, unlinkErr => {
+				if (unlinkErr) console.error('Error deleting file after database save failure:', unlinkErr)
+			})
 			res.status(500).json({ error: 'Failed to add track.' })
 		}
 	})
+})
+
+// Error route
+app.get('/error', (req, res) => {
+	res.status(500).send('An error occurred during authentication.')
 })
 
 // Start the server
