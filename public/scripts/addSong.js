@@ -67,8 +67,8 @@
 
 			try {
 				// Send data to the API
-				const response = await fetch(`${backendUrl}/api/tracks`, {
-					// Ensure backendUrl is accessible here
+				const response = await fetch(`${window.backendUrl}/api/tracks`, {
+					// Użycie window.backendUrl
 					method: 'POST',
 					body: formData,
 				})

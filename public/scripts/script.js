@@ -3,7 +3,7 @@
 // Wrap the entire code in an IIFE to prevent global scope pollution
 ;(function () {
 	const backendUrl = 'https://dagankplaylist.onrender.com' // Backend URL
-
+	window.backendUrl = backendUrl;
 	// Initialize variables
 	let currentAudio = null // Stores the current audio player
 	let currentTrackIndex = null // Index of the currently playing track
