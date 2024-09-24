@@ -102,26 +102,64 @@
 				}
 
 				trackElement.innerHTML = `
-                    <div class="track-main-info">
-                        <span class="track-number">${index + 1}</span>
-                        <i class="play-track-icon fa-solid fa-play" data-src="${track.file}"></i>
-                        <img class="track-image" src="${trackImageSrc}" alt="${
-					track.addedBy ? track.addedBy.username : 'Track image'
-				}">
-                        <span class="track-title">${track.title}</span>
-                    </div>
-                    <span class="track-plays">${track.plays}</span>
-                    <span class="track-duration">${track.duration}</span>
-                `
-				// Add event listener to play the track when clicked
+					<div class="track-main-info">
+						<span class="track-number">${index + 1}</span>
+						<i class="play-track-icon fa-solid fa-play" data-src="${track.file}"></i>
+						<img class="track-image" src="${trackImageSrc}" alt="${track.addedBy ? track.addedBy.username : 'Track image'}">
+						<span class="track-title">${track.title}</span>
+					</div>
+					<span class="track-plays">${track.plays}</span>
+					<span class="track-duration">${track.duration}</span>
+				`
+				// Add an event listener to play the track when clicked
 				trackElement.querySelector('.play-track-icon').addEventListener('click', () => playTrackByIndex(index))
 				trackList.appendChild(trackElement)
 			})
+
+			// Set the first track as default in the music player
+			if (tracks.length > 0) {
+				setDefaultTrack()
+			}
 
 			updateActiveTrack() // Update the UI to reflect the currently active track
 		} catch (error) {
 			console.error('Error loading tracks:', error)
 		}
+	}
+
+	function setDefaultTrack() {
+		const firstTrack = tracks[0];
+		currentTrackIndex = 0; // Set the current track index to 0
+		const songSrc = firstTrack.file;
+		const songTitle = firstTrack.title;
+	
+		// Initialize the audio player but don't start playing
+		currentAudio = new Audio(songSrc);
+		currentAudio.volume = currentVolume;
+		currentAudio.muted = isMuted;
+	
+		// Reset progress bar and current time display
+		songProgress.value = 0;
+		document.querySelector('.time-current').textContent = '0:00';
+		document.querySelector('.time-total').textContent = firstTrack.duration;
+	
+		// Update the UI for the music player
+		document.querySelector('.music-player-song-title').textContent = songTitle;
+	
+		// Update the player image to the track image
+		let trackImageSrc = './img/default-track-image.png'; // Default image
+		if (firstTrack.addedBy && firstTrack.addedBy.id && firstTrack.addedBy.avatar) {
+			trackImageSrc = `https://cdn.discordapp.com/avatars/${firstTrack.addedBy.id}/${firstTrack.addedBy.avatar}.png`;
+		}
+		document.querySelector('.music-player-img').src = trackImageSrc;
+	
+		// Add event listeners for the audio player
+		currentAudio.addEventListener('loadedmetadata', updateDuration);
+		currentAudio.addEventListener('timeupdate', updateProgressBar);
+		currentAudio.addEventListener('ended', handleTrackEnd);
+	
+		// Update the play/pause buttons
+		updatePlayPauseButtons(false); // Since it's not playing yet
 	}
 
 	// Function to play a selected track by index
